@@ -67,7 +67,7 @@ h1, h2, h3, h4, h5, h6 {
   font-family: 'Arial Black', system-ui, -apple-system, sans-serif;
   font-weight: 900;
   text-transform: lowercase;  /* BRAT uses lowercase */
-  line-height: 0.9;
+  line-height: 1.2;
   letter-spacing: -0.03em;
 }
 

@@ -34,6 +34,14 @@ export default function Navbar() {
             <>
               {user ? (
                 <div className="flex items-center gap-8">
+                  {user.isAdmin && (
+                    <Link 
+                      href="/admin/dashboard" 
+                      className="text-lg font-black tracking-tighter lowercase text-white hover:text-[#FFD600] transition-colors"
+                    >
+                      admin
+                    </Link>
+                  )}
                   <Link 
                     href="/profile" 
                     className="text-lg font-black tracking-tighter lowercase text-white hover:text-[#FF3366] transition-colors"

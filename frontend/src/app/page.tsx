@@ -86,7 +86,7 @@ export default function Home() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8 }}
           >
-            <h1 className="text-[180px] font-black leading-[0.8] tracking-tighter">
+            <h1 className="text-[180px] font-black tracking-tighter">
               <motion.span 
                 className="block text-[#FF7A00] mix-blend-difference lowercase"
                 animate={{ 
@@ -101,7 +101,7 @@ export default function Home() {
                 festival
               </motion.span>
               <motion.span 
-                className="block -mt-8 lowercase bg-gradient-to-r from-[#FF3366] via-[#FFD600] to-[#FF7A00] text-transparent bg-clip-text"
+                className="block -mt-32 mb-8 lowercase bg-gradient-to-r from-[#FF3366] via-[#FFD600] to-[#FF7A00] text-transparent bg-clip-text relative z-10"
                 animate={{ 
                   opacity: [1, 0.9, 1]
                 }}
@@ -115,7 +115,7 @@ export default function Home() {
                 sphere
               </motion.span>
             </h1>
-            <p className="text-3xl text-[#FFB4A2] lowercase tracking-tight font-black mt-8">
+            <p className="text-3xl text-[#FFB4A2] lowercase tracking-tight font-black -mt-10">
               your ultimate festival experience
             </p>
           </motion.div>

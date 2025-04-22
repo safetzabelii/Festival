@@ -35,6 +35,9 @@ export default function FestivalsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [imageErrors, setImageErrors] = useState<Record<string, boolean>>({});
+  const [likedFestivals, setLikedFestivals] = useState<Set<string>>(new Set());
+  const [goingToFestivals, setGoingToFestivals] = useState<Set<string>>(new Set());
+  const [isActionLoading, setIsActionLoading] = useState(false);
 
   useEffect(() => {
     const fetchFestivals = async () => {
@@ -61,8 +64,124 @@ export default function FestivalsPage() {
       }
     };
 
+    const fetchUserData = async () => {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+
+      try {
+        const response = await fetch('http://localhost:5000/api/users/me', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch user data');
+        }
+
+        const data = await response.json();
+        const likedFestivals = data.liked.map((item: any) => 
+          typeof item === 'object' ? item._id : item
+        );
+        const goingToFestivals = data.goingTo.map((item: any) => 
+          typeof item === 'object' ? item._id : item
+        );
+
+        setLikedFestivals(new Set(likedFestivals));
+        setGoingToFestivals(new Set(goingToFestivals));
+      } catch (err) {
+        console.error('Error fetching user data:', err);
+      }
+    };
+
     fetchFestivals();
+    fetchUserData();
   }, []);
+
+  const handleAction = async (festivalId: string, type: 'like' | 'going') => {
+    setIsActionLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        setError('Please login to perform this action');
+        // Redirect to login page after a short delay
+        setTimeout(() => {
+          window.location.href = '/login';
+        }, 2000);
+        return;
+      }
+
+      console.log('Making request to:', `http://localhost:5000/api/users/${type}/${festivalId}`);
+      console.log('With token:', token);
+
+      const response = await fetch(`http://localhost:5000/api/users/${type}/${festivalId}`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      console.log('Response status:', response.status);
+      console.log('Response ok:', response.ok);
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.log('Error data:', errorData);
+        
+        if (response.status === 401) {
+          setError('Your session has expired. Please login again.');
+          // Redirect to login page after a short delay
+          setTimeout(() => {
+            window.location.href = '/login';
+          }, 2000);
+          return;
+        }
+        throw new Error(errorData.message || 'Failed to perform action');
+      }
+
+      const data = await response.json();
+      console.log('Success data:', data);
+      
+      if (type === 'like') {
+        setLikedFestivals(prev => {
+          const newSet = new Set(prev);
+          if (newSet.has(festivalId)) {
+            newSet.delete(festivalId);
+          } else {
+            newSet.add(festivalId);
+          }
+          return newSet;
+        });
+        setFestivals(prev => prev.map(festival => 
+          festival._id === festivalId 
+            ? { ...festival, likes: data.festivalLikes }
+            : festival
+        ));
+      } else {
+        setGoingToFestivals(prev => {
+          const newSet = new Set(prev);
+          if (newSet.has(festivalId)) {
+            newSet.delete(festivalId);
+          } else {
+            newSet.add(festivalId);
+          }
+          return newSet;
+        });
+        setFestivals(prev => prev.map(festival => 
+          festival._id === festivalId 
+            ? { ...festival, goingTo: data.festivalGoingTo }
+            : festival
+        ));
+      }
+    } catch (err) {
+      console.error('Detailed error:', err);
+      setError(err instanceof Error ? err.message : 'An error occurred');
+    } finally {
+      setIsActionLoading(false);
+    }
+  };
 
   if (loading) {
     return <LoadingSpinner />;
@@ -167,6 +286,11 @@ export default function FestivalsPage() {
                 imageUrl={festival.imageUrl}
                 likes={festival.likes}
                 goingTo={festival.goingTo}
+                onLike={() => handleAction(festival._id, 'like')}
+                onGoing={() => handleAction(festival._id, 'going')}
+                isLiked={likedFestivals.has(festival._id)}
+                isGoing={goingToFestivals.has(festival._id)}
+                isActionLoading={isActionLoading}
               >
                 {festival.imageUrl && (
                   <div className="relative w-full h-[250px]">

@@ -3,9 +3,15 @@
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { motion } from 'framer-motion';
+import { useEffect, useState } from 'react';
 
 export default function Navbar() {
-  const { user, loading, logout } = useAuth();
+  const { user, loading: authLoading, logout } = useAuth();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   return (
     <motion.nav 
@@ -30,7 +36,7 @@ export default function Navbar() {
             festivals
           </Link>
           
-          {!loading && (
+          {mounted && !authLoading && (
             <>
               {user ? (
                 <div className="flex items-center gap-8">

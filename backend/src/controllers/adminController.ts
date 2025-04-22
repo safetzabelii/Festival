@@ -1,6 +1,8 @@
 import { Request, Response } from 'express';
 import Festival from '../models/Festival';
 import User from '../models/User';
+import Comment from '../models/Comment';
+import Notification from '../models/Notification';
 
 // Get admin dashboard statistics
 export const getAdminStats = async (req: Request, res: Response) => {
@@ -344,5 +346,43 @@ export const resetCounts = async (req: Request, res: Response) => {
   } catch (error) {
     console.error('Error resetting counts:', error);
     res.status(500).json({ message: 'Error resetting counts' });
+  }
+};
+
+// Delete user
+export const deleteUser = async (req: Request, res: Response) => {
+  try {
+    const { userId } = req.params;
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Delete user's comments
+    await Comment.deleteMany({ user: userId });
+
+    // Delete user's notifications
+    await Notification.deleteMany({ user: userId });
+
+    // Remove user's likes and going-to counts from festivals
+    const festivalsToUpdate = [...user.liked, ...user.goingTo];
+    await Festival.updateMany(
+      { _id: { $in: festivalsToUpdate } },
+      {
+        $inc: {
+          likes: -1,
+          goingTo: -1
+        }
+      }
+    );
+
+    // Delete the user
+    await User.findByIdAndDelete(userId);
+
+    res.json({ message: 'User deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting user:', error);
+    res.status(500).json({ message: 'Error deleting user' });
   }
 }; 

@@ -6,6 +6,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import Navbar from '@/components/Navbar';
 import Link from 'next/link';
 import LoadingSpinner from '@/components/LoadingSpinner';
+import { motion } from 'framer-motion';
+import Image from 'next/image';
 
 interface Festival {
   _id: string;
@@ -86,15 +88,10 @@ export default function ProfilePage() {
 
   if (error) {
     return (
-      <div style={{ minHeight: '100vh', backgroundColor: 'var(--background-color)' }}>
+      <div className="min-h-screen bg-black">
         <Navbar />
-        <div style={{ 
-          maxWidth: '80rem',
-          marginLeft: 'auto',
-          marginRight: 'auto',
-          padding: '3rem 1rem'
-        }}>
-          <div style={{ textAlign: 'center', color: '#dc2626' }}>Error: {error}</div>
+        <div className="max-w-7xl mx-auto px-4 py-20">
+          <div className="text-center text-[#FF3366]">Error: {error}</div>
         </div>
       </div>
     );
@@ -102,15 +99,10 @@ export default function ProfilePage() {
 
   if (!profile) {
     return (
-      <div style={{ minHeight: '100vh', backgroundColor: 'var(--background-color)' }}>
+      <div className="min-h-screen bg-black">
         <Navbar />
-        <div style={{ 
-          maxWidth: '80rem',
-          marginLeft: 'auto',
-          marginRight: 'auto',
-          padding: '3rem 1rem'
-        }}>
-          <div style={{ textAlign: 'center' }}>Profile not found</div>
+        <div className="max-w-7xl mx-auto px-4 py-20">
+          <div className="text-center text-[#FFB4A2]">Profile not found</div>
         </div>
       </div>
     );
@@ -124,284 +116,200 @@ export default function ProfilePage() {
   };
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: 'var(--background-color)' }}>
+    <div className="min-h-screen bg-gradient-to-br from-black via-black to-[#FF7A00]/20">
       <Navbar />
-      <div style={{ 
-        maxWidth: '80rem',
-        marginLeft: 'auto',
-        marginRight: 'auto',
-        padding: '3rem 1rem'
-      }}>
-        <div style={{ 
-          backgroundColor: 'white',
-          padding: '2rem',
-          borderRadius: '0.5rem',
-          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
-          marginBottom: '2rem'
-        }}>
-          <div style={{ 
-            display: 'flex',
-            alignItems: 'center',
-            gap: '2rem',
-            marginBottom: '2rem'
-          }}>
-            <div style={{
-              width: '6rem',
-              height: '6rem',
-              borderRadius: '50%',
-              backgroundColor: '#E5E7EB',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}>
+      
+      <div className="fixed inset-0 bg-[#FF7A00]/5 backdrop-blur-3xl pointer-events-none" />
+
+      <main className="relative z-10 max-w-7xl mx-auto px-4 py-20">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8 }}
+        >
+          <h1 className="text-8xl font-black tracking-tighter lowercase text-center mb-4 bg-gradient-to-r from-[#FF7A00] via-[#FFD600] to-[#FF3366] text-transparent bg-clip-text">
+            profile
+          </h1>
+          <p className="text-2xl text-[#FFB4A2] text-center mb-16 font-black tracking-tight lowercase">
+            your festival journey
+          </p>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, delay: 0.2 }}
+          className="bg-black/40 backdrop-blur-sm border-2 border-[#FF7A00]/20 rounded-xl p-8 mb-8"
+        >
+          <div className="flex items-center gap-8">
+            <div className="relative w-24 h-24 rounded-full overflow-hidden border-2 border-[#FF7A00]">
               {profile.avatar ? (
-                <img
+                <Image
                   src={profile.avatar}
                   alt={profile.name}
-                  style={{
-                    width: '100%',
-                    height: '100%',
-                    borderRadius: '50%',
-                    objectFit: 'cover'
-                  }}
+                  fill
+                  className="object-cover"
                 />
               ) : (
-                <svg
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                  style={{ width: '3rem', height: '3rem', color: '#9CA3AF' }}
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                  />
-                </svg>
+                <div className="w-full h-full bg-[#FF7A00]/20 flex items-center justify-center">
+                  <svg
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    className="w-12 h-12 text-[#FF7A00]"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                    />
+                  </svg>
+                </div>
               )}
             </div>
+            
             <div>
-              <h1 style={{ 
-                fontSize: '1.875rem',
-                fontWeight: 'bold',
-                color: 'var(--text-color)',
-                marginBottom: '0.5rem'
-              }}>
+              <h2 className="text-3xl font-black tracking-tighter text-white mb-2">
                 {profile.name}
-              </h1>
-              <p style={{ color: 'var(--text-secondary)' }}>{profile.email}</p>
+              </h2>
+              <p className="text-[#FFB4A2] text-lg">{profile.email}</p>
             </div>
           </div>
-        </div>
+        </motion.div>
 
-        <div style={{ 
-          backgroundColor: 'white',
-          borderRadius: '0.5rem',
-          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
-          overflow: 'hidden'
-        }}>
-          <div style={{ 
-            display: 'flex',
-            borderBottom: '1px solid var(--border-color)'
-          }}>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, delay: 0.3 }}
+          className="bg-black/40 backdrop-blur-sm border-2 border-[#FF7A00]/20 rounded-xl overflow-hidden"
+        >
+          <div className="flex border-b border-[#FF7A00]/20">
             <button
               onClick={() => setActiveTab('liked')}
-              style={{
-                flex: 1,
-                padding: '1rem',
-                backgroundColor: activeTab === 'liked' ? 'var(--primary-color)' : 'white',
-                color: activeTab === 'liked' ? 'white' : 'var(--text-color)',
-                border: 'none',
-                cursor: 'pointer',
-                fontWeight: '500'
-              }}
+              className={`flex-1 py-4 text-lg font-black tracking-tighter transition-colors duration-300 ${
+                activeTab === 'liked'
+                  ? 'bg-[#FF7A00] text-black'
+                  : 'text-[#FFB4A2] hover:text-[#FFD600]'
+              }`}
             >
               Liked Festivals
             </button>
             <button
               onClick={() => setActiveTab('going')}
-              style={{
-                flex: 1,
-                padding: '1rem',
-                backgroundColor: activeTab === 'going' ? 'var(--primary-color)' : 'white',
-                color: activeTab === 'going' ? 'white' : 'var(--text-color)',
-                border: 'none',
-                cursor: 'pointer',
-                fontWeight: '500'
-              }}
+              className={`flex-1 py-4 text-lg font-black tracking-tighter transition-colors duration-300 ${
+                activeTab === 'going'
+                  ? 'bg-[#FF7A00] text-black'
+                  : 'text-[#FFB4A2] hover:text-[#FFD600]'
+              }`}
             >
               Going To
             </button>
           </div>
 
-          <div style={{ padding: '2rem' }}>
+          <div className="p-6">
             {activeTab === 'liked' ? (
               profile.liked.length > 0 ? (
-                <div style={{ 
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
-                  gap: '2rem'
-                }}>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {profile.liked.map((festival) => (
-                    <div
+                    <motion.div
                       key={festival._id}
-                      style={{
-                        backgroundColor: 'white',
-                        borderRadius: '0.5rem',
-                        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
-                        overflow: 'hidden'
-                      }}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.5 }}
+                      className="group relative overflow-hidden bg-black/40 backdrop-blur-sm border-2 border-[#FF7A00]/20 rounded-xl"
                     >
                       {festival.imageUrl && (
-                        <div style={{ position: 'relative', height: '12rem', width: '100%' }}>
-                          <img
+                        <div className="relative w-full h-48">
+                          <Image
                             src={getImageUrl(festival.imageUrl)}
                             alt={festival.name}
-                            style={{ 
-                              objectFit: 'cover',
-                              width: '100%',
-                              height: '100%'
-                            }}
+                            fill
+                            className="object-cover"
                           />
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent" />
                         </div>
                       )}
-                      <div style={{ padding: '1.5rem' }}>
-                        <h3 style={{ 
-                          fontSize: '1.25rem',
-                          fontWeight: 'bold',
-                          marginBottom: '0.5rem'
-                        }}>
+                      
+                      <div className="p-6">
+                        <h3 className="text-2xl font-black tracking-tighter text-white mb-2 group-hover:text-[#FFD600] transition-colors duration-300">
                           {festival.name}
                         </h3>
-                        <div style={{ 
-                          display: 'flex',
-                          alignItems: 'center',
-                          color: 'var(--text-secondary)',
-                          marginBottom: '1rem'
-                        }}>
-                          <svg
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                            style={{ width: '1.25rem', height: '1.25rem', marginRight: '0.5rem' }}
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
-                            />
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
-                            />
+                        <div className="flex items-center gap-2 mb-4 text-[#FFB4A2]">
+                          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" />
                           </svg>
-                          <span>{formatLocation(festival.location)}</span>
+                          <span className="text-sm">{formatLocation(festival.location)}</span>
                         </div>
                         <Link
                           href={`/festivals/${festival._id}`}
-                          className="btn btn-primary"
-                          style={{ display: 'inline-block' }}
+                          className="inline-block px-6 py-2 bg-[#FF7A00] text-black font-black tracking-tighter rounded-lg hover:bg-[#FF3366] hover:text-white transition-all duration-300"
                         >
                           View Details
                         </Link>
                       </div>
-                    </div>
+                    </motion.div>
                   ))}
                 </div>
               ) : (
-                <p style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>
+                <p className="text-center text-[#FFB4A2] py-8">
                   No liked festivals yet
                 </p>
               )
             ) : (
               profile.goingTo.length > 0 ? (
-                <div style={{ 
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
-                  gap: '2rem'
-                }}>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {profile.goingTo.map((festival) => (
-                    <div
+                    <motion.div
                       key={festival._id}
-                      style={{
-                        backgroundColor: 'white',
-                        borderRadius: '0.5rem',
-                        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
-                        overflow: 'hidden'
-                      }}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.5 }}
+                      className="group relative overflow-hidden bg-black/40 backdrop-blur-sm border-2 border-[#FF7A00]/20 rounded-xl"
                     >
                       {festival.imageUrl && (
-                        <div style={{ position: 'relative', height: '12rem', width: '100%' }}>
-                          <img
+                        <div className="relative w-full h-48">
+                          <Image
                             src={getImageUrl(festival.imageUrl)}
                             alt={festival.name}
-                            style={{ 
-                              objectFit: 'cover',
-                              width: '100%',
-                              height: '100%'
-                            }}
+                            fill
+                            className="object-cover"
                           />
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent" />
                         </div>
                       )}
-                      <div style={{ padding: '1.5rem' }}>
-                        <h3 style={{ 
-                          fontSize: '1.25rem',
-                          fontWeight: 'bold',
-                          marginBottom: '0.5rem'
-                        }}>
+                      
+                      <div className="p-6">
+                        <h3 className="text-2xl font-black tracking-tighter text-white mb-2 group-hover:text-[#FFD600] transition-colors duration-300">
                           {festival.name}
                         </h3>
-                        <div style={{ 
-                          display: 'flex',
-                          alignItems: 'center',
-                          color: 'var(--text-secondary)',
-                          marginBottom: '1rem'
-                        }}>
-                          <svg
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                            style={{ width: '1.25rem', height: '1.25rem', marginRight: '0.5rem' }}
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
-                            />
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
-                            />
+                        <div className="flex items-center gap-2 mb-4 text-[#FFB4A2]">
+                          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" />
                           </svg>
-                          <span>{formatLocation(festival.location)}</span>
+                          <span className="text-sm">{formatLocation(festival.location)}</span>
                         </div>
                         <Link
                           href={`/festivals/${festival._id}`}
-                          className="btn btn-primary"
-                          style={{ display: 'inline-block' }}
+                          className="inline-block px-6 py-2 bg-[#FF7A00] text-black font-black tracking-tighter rounded-lg hover:bg-[#FF3366] hover:text-white transition-all duration-300"
                         >
                           View Details
                         </Link>
                       </div>
-                    </div>
+                    </motion.div>
                   ))}
                 </div>
               ) : (
-                <p style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>
+                <p className="text-center text-[#FFB4A2] py-8">
                   No festivals you're going to yet
                 </p>
               )
             )}
           </div>
-        </div>
-      </div>
+        </motion.div>
+      </main>
     </div>
   );
 } 

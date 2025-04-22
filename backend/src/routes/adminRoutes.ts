@@ -6,7 +6,8 @@ import {
   getUserManagementData,
   updateUserRole,
   getPendingNonAdminFestivals,
-  resetCounts
+  resetCounts,
+  deleteUser
 } from '../controllers/adminController';
 
 const router = express.Router();
@@ -28,5 +29,7 @@ router.put('/users/:userId/role', updateUserRole);
 router.get('/pending-festivals', getPendingNonAdminFestivals);
 
 router.post('/reset-counts', resetCounts);
+
+router.delete('/users/:userId', deleteUser);
 
 export default router; 

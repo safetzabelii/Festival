@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import Navbar from '@/components/Navbar';
 import LoadingSpinner from '@/components/LoadingSpinner';
+import Modal from '../../../components/Modal';
 
 interface User {
   _id: string;
@@ -12,23 +13,26 @@ interface User {
   email: string;
   isAdmin: boolean;
   createdAt: string;
-  liked: string[];
-  goingTo: string[];
-  lastLogin: string;
-  status: 'active' | 'inactive' | 'suspended';
-  totalActions: number;
-  profileCompleted: boolean;
+  lastLogin?: string;
+  liked?: string[];
+  goingTo?: string[];
+  socialLinks?: {
+    instagram?: string;
+    twitter?: string;
+    website?: string;
+  };
 }
 
 export default function UserManagementPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filter, setFilter] = useState<'all' | 'admin' | 'user' | 'active' | 'inactive'>('all');
-  const [sortBy, setSortBy] = useState<'name' | 'email' | 'createdAt' | 'totalActions'>('createdAt');
+  const [filter, setFilter] = useState<'all' | 'admin' | 'user'>('all');
+  const [sortBy, setSortBy] = useState<'name' | 'email' | 'createdAt'>('createdAt');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<User | null>(null);
   const { user } = useAuth();
   const router = useRouter();
 
@@ -39,38 +43,17 @@ export default function UserManagementPage() {
 
       const response = await fetch('http://localhost:5000/api/admin/users', {
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Accept': 'application/json'
+          'Authorization': `Bearer ${token}`
         }
       });
 
       if (!response.ok) {
-        if (response.headers.get('content-type')?.includes('text/html')) {
-          throw new Error('Server error: Please check if the backend server is running');
-        }
-        const errorData = await response.json().catch(() => ({ message: 'Failed to fetch users' }));
+        const errorData = await response.json();
         throw new Error(errorData.message || 'Failed to fetch users');
       }
 
-      const data = await response.json().catch(() => {
-        throw new Error('Invalid response format from server');
-      });
-
-      if (!Array.isArray(data)) {
-        throw new Error('Invalid data received from server');
-      }
-
-      const processedData = data.map(user => ({
-        ...user,
-        status: user.status || 'active',
-        lastLogin: user.lastLogin || user.createdAt,
-        totalActions: user.totalActions || 0,
-        profileCompleted: user.profileCompleted ?? true,
-        liked: user.liked || [],
-        goingTo: user.goingTo || []
-      }));
-
-      setUsers(processedData);
+      const data = await response.json();
+      setUsers(data);
     } catch (err) {
       console.error('Users fetch error:', err);
       setError(err instanceof Error ? err.message : 'An error occurred while fetching users');
@@ -80,109 +63,77 @@ export default function UserManagementPage() {
   };
 
   useEffect(() => {
+    if (user === null) {
+      // User is still loading, do nothing
+      return;
+    }
+    
+    if (user && !user.isAdmin) {
+      if (window.history.length > 1) {
+        router.back();
+      } else {
+        router.push('/');
+      }
+      return;
+    }
+    
     fetchUsers();
-  }, []);
+  }, [user, router]);
 
-  const handleToggleAdmin = async (userId: string, currentIsAdmin: boolean) => {
+  const handleDeleteUser = (user: User) => {
+    setUserToDelete(user);
+    setShowDeleteModal(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!userToDelete) return;
+    
     try {
-      setActionLoading(userId);
+      const response = await fetch(`http://localhost:5000/api/admin/users/${userToDelete._id}`, {
+        method: 'DELETE',
+      });
+      
+      if (!response.ok) throw new Error('Failed to delete user');
+      
+      setUsers(users.filter(u => u._id !== userToDelete._id));
+      setShowDeleteModal(false);
+      setUserToDelete(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete user');
+    }
+  };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  };
+
+  const handleToggleAdmin = async (userId: string, currentStatus: boolean) => {
+    try {
       const token = localStorage.getItem('token');
       if (!token) throw new Error('No authentication token found');
 
-      const response = await fetch(`http://localhost:5000/api/admin/users/${userId}/toggle-admin`, {
+      const response = await fetch(`http://localhost:5000/api/admin/users/${userId}/role`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
+          'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ isAdmin: !currentIsAdmin })
+        body: JSON.stringify({ isAdmin: !currentStatus })
       });
 
       if (!response.ok) {
-        if (response.headers.get('content-type')?.includes('text/html')) {
-          throw new Error('Server error: Please check if the backend server is running');
-        }
-        const errorData = await response.json().catch(() => ({ message: 'Failed to update user role' }));
+        const errorData = await response.json();
         throw new Error(errorData.message || 'Failed to update user role');
       }
 
-      await fetchUsers();
+      const updatedUser = await response.json();
+      setUsers(users.map(u => u._id === userId ? updatedUser : u));
     } catch (err) {
-      console.error('Toggle admin error:', err);
-      setError(err instanceof Error ? err.message : 'An error occurred while updating user role');
-    } finally {
-      setActionLoading(null);
-    }
-  };
-
-  const handleToggleStatus = async (userId: string, currentStatus: string) => {
-    try {
-      setActionLoading(userId);
-      const token = localStorage.getItem('token');
-      if (!token) throw new Error('No authentication token found');
-
-      const newStatus = currentStatus === 'active' ? 'suspended' : 'active';
-
-      const response = await fetch(`http://localhost:5000/api/admin/users/${userId}/toggle-status`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
-        body: JSON.stringify({ status: newStatus })
-      });
-
-      if (!response.ok) {
-        if (response.headers.get('content-type')?.includes('text/html')) {
-          throw new Error('Server error: Please check if the backend server is running');
-        }
-        const errorData = await response.json().catch(() => ({ message: 'Failed to update user status' }));
-        throw new Error(errorData.message || 'Failed to update user status');
-      }
-
-      await fetchUsers();
-    } catch (err) {
-      console.error('Toggle status error:', err);
-      setError(err instanceof Error ? err.message : 'An error occurred while updating user status');
-    } finally {
-      setActionLoading(null);
-    }
-  };
-
-  const handleDeleteUser = async (userId: string) => {
-    if (!confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
-      return;
-    }
-
-    try {
-      setActionLoading(userId);
-      const token = localStorage.getItem('token');
-      if (!token) throw new Error('No authentication token found');
-
-      const response = await fetch(`http://localhost:5000/api/admin/users/${userId}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Accept': 'application/json'
-        }
-      });
-
-      if (!response.ok) {
-        if (response.headers.get('content-type')?.includes('text/html')) {
-          throw new Error('Server error: Please check if the backend server is running');
-        }
-        const errorData = await response.json().catch(() => ({ message: 'Failed to delete user' }));
-        throw new Error(errorData.message || 'Failed to delete user');
-      }
-
-      await fetchUsers();
-    } catch (err) {
-      console.error('Delete user error:', err);
-      setError(err instanceof Error ? err.message : 'An error occurred while deleting user');
-    } finally {
-      setActionLoading(null);
+      setError(err instanceof Error ? err.message : 'Failed to update user role');
     }
   };
 
@@ -199,8 +150,6 @@ export default function UserManagementPage() {
       switch (filter) {
         case 'admin': return u.isAdmin;
         case 'user': return !u.isAdmin;
-        case 'active': return u.status === 'active';
-        case 'inactive': return u.status === 'inactive' || u.status === 'suspended';
         default: return true;
       }
     })
@@ -209,23 +158,16 @@ export default function UserManagementPage() {
       switch (sortBy) {
         case 'name': return order * a.name.localeCompare(b.name);
         case 'email': return order * a.email.localeCompare(b.email);
-        case 'totalActions': return order * (a.totalActions - b.totalActions);
         default: return order * (new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
       }
     });
 
   if (!user || !user.isAdmin) {
     return (
-      <div style={{ minHeight: '100vh', backgroundColor: 'var(--background-color)' }}>
+      <div className="min-h-screen bg-black">
         <Navbar />
-        <div style={{ 
-          maxWidth: '80rem',
-          marginLeft: 'auto',
-          marginRight: 'auto',
-          padding: '3rem 1rem',
-          textAlign: 'center'
-        }}>
-          <p style={{ color: '#dc2626' }}>Access Denied: Admin privileges required</p>
+        <div className="max-w-7xl mx-auto px-4 py-20">
+          <div className="text-center text-[#FF3366]">Access Denied: Admin privileges required</div>
         </div>
       </div>
     );
@@ -236,208 +178,181 @@ export default function UserManagementPage() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: 'var(--background-color)' }}>
+    <div className="min-h-screen bg-black">
       <Navbar />
-      <div style={{ 
-        maxWidth: '80rem',
-        marginLeft: 'auto',
-        marginRight: 'auto',
-        padding: '3rem 1rem'
-      }}>
-        <div style={{ 
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          marginBottom: '2rem'
-        }}>
-          <h1 style={{ 
-            fontSize: '2.25rem',
-            fontWeight: 'bold',
-            color: 'var(--text-color)'
-          }}>
-            User Management
-          </h1>
-          <div style={{ display: 'flex', gap: '1rem' }}>
-            <input
-              type="text"
-              placeholder="Search users..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              style={{
-                padding: '0.5rem 1rem',
-                borderRadius: '0.375rem',
-                border: '1px solid var(--border-color)',
-                width: '250px'
-              }}
-            />
-            <select
-              value={filter}
-              onChange={(e) => setFilter(e.target.value as any)}
-              style={{
-                padding: '0.5rem 1rem',
-                borderRadius: '0.375rem',
-                border: '1px solid var(--border-color)',
-                backgroundColor: 'white'
-              }}
-            >
-              <option value="all">All Users</option>
-              <option value="admin">Admins</option>
-              <option value="user">Regular Users</option>
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
-            </select>
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as any)}
-              style={{
-                padding: '0.5rem 1rem',
-                borderRadius: '0.375rem',
-                border: '1px solid var(--border-color)',
-                backgroundColor: 'white'
-              }}
-            >
-              <option value="createdAt">Join Date</option>
-              <option value="name">Name</option>
-              <option value="email">Email</option>
-              <option value="totalActions">Activity</option>
-            </select>
+      <main className="relative z-10 max-w-7xl mx-auto px-4 py-20">
+        <h1 className="text-4xl font-black tracking-tighter text-white text-center mb-4">
+          User Management
+        </h1>
+        <p className="text-lg text-[#FFB4A2] text-center mb-8 font-black tracking-tight lowercase">
+          manage users
+        </p>
+
+        <div className="bg-black/40 backdrop-blur-sm border-2 border-[#FF7A00]/20 rounded-xl p-6 mb-8">
+          <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-6">
+            <div className="flex gap-4">
+              <input
+                type="text"
+                placeholder="Search users..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="px-4 py-2 bg-black/40 border-2 border-[#FF7A00]/20 rounded-lg text-white placeholder-[#FFB4A2] focus:outline-none focus:border-[#FF7A00]"
+              />
+              <select
+                value={filter}
+                onChange={(e) => setFilter(e.target.value as any)}
+                className="px-4 py-2 bg-black/40 border-2 border-[#FF7A00]/20 rounded-lg text-white focus:outline-none focus:border-[#FF7A00]"
+              >
+                <option value="all">All Users</option>
+                <option value="admin">Admins</option>
+                <option value="user">Regular Users</option>
+              </select>
+            </div>
+            <div className="flex gap-4">
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as any)}
+                className="px-4 py-2 bg-black/40 border-2 border-[#FF7A00]/20 rounded-lg text-white focus:outline-none focus:border-[#FF7A00]"
+              >
+                <option value="createdAt">Sort by Created Date</option>
+                <option value="name">Sort by Name</option>
+                <option value="email">Sort by Email</option>
+              </select>
+              <button
+                onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+                className="px-4 py-2 bg-[#FF7A00] text-black font-black tracking-tighter rounded-lg hover:bg-[#FF3366] hover:text-white transition-all duration-300"
+              >
+                {sortOrder === 'asc' ? '↑' : '↓'}
+              </button>
+            </div>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b-2 border-[#FF7A00]/20">
+                  <th className="text-left py-4 px-4 text-[#FFB4A2] font-black tracking-tighter">User Info</th>
+                  <th className="text-center py-4 px-4 text-[#FFB4A2] font-black tracking-tighter">Role</th>
+                  <th className="text-center py-4 px-4 text-[#FFB4A2] font-black tracking-tighter">Activity</th>
+                  <th className="text-center py-4 px-4 text-[#FFB4A2] font-black tracking-tighter">Created At</th>
+                  <th className="text-center py-4 px-4 text-[#FFB4A2] font-black tracking-tighter">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredUsers.map(user => (
+                  <tr key={user._id} className="border-b border-[#FF7A00]/20">
+                    <td className="py-4 px-4">
+                      <div className="text-white font-black tracking-tighter">{user.name}</div>
+                      <div className="text-[#FFB4A2] text-sm">{user.email}</div>
+                      {user.socialLinks && (
+                        <div className="flex gap-2 mt-2">
+                          {user.socialLinks.instagram && (
+                            <a href={user.socialLinks.instagram} target="_blank" rel="noopener noreferrer" className="text-[#FFB4A2] hover:text-[#FF7A00]">
+                              <i className="fab fa-instagram"></i>
+                            </a>
+                          )}
+                          {user.socialLinks.twitter && (
+                            <a href={user.socialLinks.twitter} target="_blank" rel="noopener noreferrer" className="text-[#FFB4A2] hover:text-[#FF7A00]">
+                              <i className="fab fa-twitter"></i>
+                            </a>
+                          )}
+                          {user.socialLinks.website && (
+                            <a href={user.socialLinks.website} target="_blank" rel="noopener noreferrer" className="text-[#FFB4A2] hover:text-[#FF7A00]">
+                              <i className="fas fa-globe"></i>
+                            </a>
+                          )}
+                        </div>
+                      )}
+                    </td>
+                    <td className="py-4 px-4 text-center">
+                      <div className="flex flex-col items-center gap-2">
+                        <div className={`inline-block px-3 py-1 rounded-full text-sm font-black tracking-tighter ${
+                          user.isAdmin 
+                            ? 'bg-[#FFD600]/20 text-[#FFD600]' 
+                            : 'bg-[#FF7A00]/20 text-[#FF7A00]'
+                        }`}>
+                          {user.isAdmin ? 'Admin' : 'User'}
+                        </div>
+                        <button
+                          onClick={() => handleToggleAdmin(user._id, user.isAdmin)}
+                          className="text-sm text-[#FFB4A2] hover:text-[#FF7A00] transition-colors"
+                        >
+                          {user.isAdmin ? 'Remove Admin' : 'Make Admin'}
+                        </button>
+                      </div>
+                    </td>
+                    <td className="py-4 px-4 text-center">
+                      <div className="flex flex-col gap-1">
+                        <div className="text-[#FFB4A2] text-sm">
+                          <i className="fas fa-heart mr-1"></i>
+                          {user.liked?.length || 0} Likes
+                        </div>
+                        <div className="text-[#FFB4A2] text-sm">
+                          <i className="fas fa-calendar-check mr-1"></i>
+                          {user.goingTo?.length || 0} Going
+                        </div>
+                        {user.lastLogin && (
+                          <div className="text-[#FFB4A2] text-sm">
+                            <i className="fas fa-clock mr-1"></i>
+                            Last login: {formatDate(user.lastLogin)}
+                          </div>
+                        )}
+                      </div>
+                    </td>
+                    <td className="py-4 px-4 text-center">
+                      <div className="text-[#FFB4A2] text-sm">
+                        {formatDate(user.createdAt)}
+                      </div>
+                    </td>
+                    <td className="py-4 px-4 text-center">
+                      <button
+                        onClick={() => handleDeleteUser(user)}
+                        className="px-4 py-2 rounded-lg font-black tracking-tighter bg-[#FF3366] text-white hover:bg-[#FF3366]/80 transition-all duration-300"
+                      >
+                        Delete
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </main>
+
+      <Modal
+        isOpen={showDeleteModal}
+        onClose={() => {
+          setShowDeleteModal(false);
+          setUserToDelete(null);
+        }}
+      >
+        <div className="p-6">
+          <h3 className="text-lg font-medium text-gray-900 mb-4">
+            Confirm Delete User
+          </h3>
+          <p className="text-sm text-gray-500 mb-6">
+            Are you sure you want to delete the user {userToDelete?.name}? This action cannot be undone.
+          </p>
+          <div className="flex justify-end space-x-4">
             <button
-              onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
-              style={{
-                padding: '0.5rem 1rem',
-                borderRadius: '0.375rem',
-                border: '1px solid var(--border-color)',
-                backgroundColor: 'white',
-                cursor: 'pointer'
+              onClick={() => {
+                setShowDeleteModal(false);
+                setUserToDelete(null);
               }}
+              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
             >
-              {sortOrder === 'asc' ? '↑' : '↓'}
+              Cancel
+            </button>
+            <button
+              onClick={confirmDelete}
+              className="px-4 py-2 text-sm font-medium text-white bg-red-600 border border-transparent rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+            >
+              Delete
             </button>
           </div>
         </div>
-
-        {error && (
-          <div style={{ 
-            backgroundColor: '#fef2f2',
-            color: '#dc2626',
-            padding: '0.75rem 1rem',
-            borderRadius: '0.375rem',
-            marginBottom: '1rem'
-          }}>
-            {error}
-          </div>
-        )}
-
-        <div style={{ 
-          backgroundColor: 'white',
-          borderRadius: '0.5rem',
-          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
-          overflow: 'hidden'
-        }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead>
-              <tr style={{ 
-                backgroundColor: 'var(--background-color)',
-                borderBottom: '1px solid var(--border-color)'
-              }}>
-                <th style={{ padding: '1rem', textAlign: 'left' }}>User Info</th>
-                <th style={{ padding: '1rem', textAlign: 'center' }}>Status</th>
-                <th style={{ padding: '1rem', textAlign: 'center' }}>Role</th>
-                <th style={{ padding: '1rem', textAlign: 'center' }}>Activity</th>
-                <th style={{ padding: '1rem', textAlign: 'center' }}>Profile</th>
-                <th style={{ padding: '1rem', textAlign: 'center' }}>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredUsers.map(user => (
-                <tr key={user._id} style={{ borderBottom: '1px solid var(--border-color)' }}>
-                  <td style={{ padding: '1rem' }}>
-                    <div style={{ fontWeight: '500' }}>{user.name}</div>
-                    <div style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>{user.email}</div>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                      Joined {new Date(user.createdAt).toLocaleDateString()}
-                    </div>
-                  </td>
-                  <td style={{ padding: '1rem', textAlign: 'center' }}>
-                    <span
-                      style={{
-                        backgroundColor: user.status === 'active' ? '#059669' : '#dc2626',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '0.375rem',
-                        padding: '0.25rem 0.5rem',
-                        display: 'inline-block'
-                      }}
-                    >
-                      {user.status === 'active' ? 'Active' : 'Suspended'}
-                    </span>
-                  </td>
-                  <td style={{ padding: '1rem', textAlign: 'center' }}>
-                    <span
-                      style={{
-                        backgroundColor: user.isAdmin ? 'var(--primary-color)' : 'transparent',
-                        color: user.isAdmin ? 'white' : 'var(--text-color)',
-                        border: '1px solid var(--border-color)',
-                        borderRadius: '0.375rem',
-                        padding: '0.25rem 0.5rem',
-                        display: 'inline-block'
-                      }}
-                    >
-                      {user.isAdmin ? 'Admin' : 'User'}
-                    </span>
-                  </td>
-                  <td style={{ padding: '1rem', textAlign: 'center' }}>
-                    <div>Actions: {user.totalActions}</div>
-                    <div style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
-                      Last active: {new Date(user.lastLogin).toLocaleDateString()}
-                    </div>
-                  </td>
-                  <td style={{ padding: '1rem', textAlign: 'center' }}>
-                    <div style={{ 
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: '0.25rem',
-                      alignItems: 'center'
-                    }}>
-                      <div style={{ 
-                        width: '12px',
-                        height: '12px',
-                        borderRadius: '50%',
-                        backgroundColor: user.profileCompleted ? '#059669' : '#dc2626'
-                      }} />
-                      <span style={{ fontSize: '0.875rem' }}>
-                        {user.profileCompleted ? 'Complete' : 'Incomplete'}
-                      </span>
-                    </div>
-                  </td>
-                  <td style={{ padding: '1rem', textAlign: 'center' }}>
-                    <button
-                      onClick={() => handleDeleteUser(user._id)}
-                      disabled={actionLoading === user._id}
-                      style={{
-                        backgroundColor: '#dc2626',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '0.375rem',
-                        padding: '0.25rem 0.5rem',
-                        cursor: 'pointer'
-                      }}
-                    >
-                      {actionLoading === user._id ? (
-                        <div style={{ width: '16px', height: '16px' }}>
-                          <LoadingSpinner />
-                        </div>
-                      ) : (
-                        'Delete'
-                      )}
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      </Modal>
     </div>
   );
 } 

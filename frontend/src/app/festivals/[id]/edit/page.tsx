@@ -207,29 +207,14 @@ export default function EditFestivalPage() {
         lineup: formData.lineup.filter(artist => artist.trim() !== '')
       };
 
-      console.log('Submitting festival data:', formattedData);
-      console.log('Image file:', formData.imageFile);
-
       // Create FormData for file upload
       const formDataToSend = new FormData();
       formDataToSend.append('festivalData', JSON.stringify(formattedData));
       
       if (formData.imageFile) {
-        console.log('Appending image file:', {
-          name: formData.imageFile.name,
-          type: formData.imageFile.type,
-          size: formData.imageFile.size
-        });
         formDataToSend.append('image', formData.imageFile);
       }
 
-      // Log the FormData contents
-      console.log('FormData entries:');
-      for (let pair of formDataToSend.entries()) {
-        console.log(pair[0], pair[1]);
-      }
-
-      console.log('Sending request to server...');
       const response = await fetch(`http://localhost:5000/api/festivals/${params.id}`, {
         method: 'PUT',
         headers: {
@@ -242,9 +227,6 @@ export default function EditFestivalPage() {
         const errorData = await response.json();
         throw new Error(errorData.message || 'Failed to update festival');
       }
-
-      const responseData = await response.json();
-      console.log('Server response:', responseData);
 
       router.push('/festivals');
     } catch (err) {
@@ -261,16 +243,10 @@ export default function EditFestivalPage() {
 
   if (!user) {
     return (
-      <div style={{ minHeight: '100vh', backgroundColor: 'var(--background-color)' }}>
+      <div className="min-h-screen bg-black">
         <Navbar />
-        <div style={{ 
-          maxWidth: '80rem',
-          marginLeft: 'auto',
-          marginRight: 'auto',
-          padding: '3rem 1rem',
-          textAlign: 'center'
-        }}>
-          <p style={{ color: '#dc2626' }}>Please log in to edit the festival</p>
+        <div className="max-w-7xl mx-auto px-4 py-20">
+          <div className="text-center text-[#FF3366]">Please log in to edit the festival</div>
         </div>
       </div>
     );
@@ -278,60 +254,36 @@ export default function EditFestivalPage() {
 
   if (!user.isAdmin) {
     return (
-      <div style={{ minHeight: '100vh', backgroundColor: 'var(--background-color)' }}>
+      <div className="min-h-screen bg-black">
         <Navbar />
-        <div style={{ 
-          maxWidth: '80rem',
-          marginLeft: 'auto',
-          marginRight: 'auto',
-          padding: '3rem 1rem',
-          textAlign: 'center'
-        }}>
-          <p style={{ color: '#dc2626' }}>Access Denied: Admin privileges required to edit festivals</p>
+        <div className="max-w-7xl mx-auto px-4 py-20">
+          <div className="text-center text-[#FF3366]">Access Denied: Admin privileges required to edit festivals</div>
         </div>
       </div>
     );
   }
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: 'var(--background-color)' }}>
+    <div className="min-h-screen bg-black">
       <Navbar />
-      <div style={{ 
-        maxWidth: '48rem',
-        marginLeft: 'auto',
-        marginRight: 'auto',
-        padding: '3rem 1rem'
-      }}>
-        <div style={{ 
-          backgroundColor: 'white',
-          padding: '2rem',
-          borderRadius: '0.5rem',
-          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
-        }}>
-          <h1 style={{ 
-            fontSize: '1.875rem',
-            fontWeight: 'bold',
-            color: 'var(--text-color)',
-            marginBottom: '2rem'
-          }}>
-            Edit Festival
-          </h1>
-          
+      <main className="relative z-10 max-w-7xl mx-auto px-4 py-20">
+        <h1 className="text-8xl font-black tracking-tighter lowercase text-center mb-4 bg-gradient-to-r from-[#FF7A00] via-[#FFD600] to-[#FF3366] text-transparent bg-clip-text">
+          edit festival
+        </h1>
+        <p className="text-2xl text-[#FFB4A2] text-center mb-16 font-black tracking-tight lowercase">
+          update your festival details
+        </p>
+
+        <div className="bg-black/40 backdrop-blur-sm border-2 border-[#FF7A00]/20 rounded-xl p-8 max-w-3xl mx-auto">
           {error && (
-            <div style={{ 
-              backgroundColor: '#fef2f2',
-              color: '#dc2626',
-              padding: '0.75rem 1rem',
-              borderRadius: '0.375rem',
-              marginBottom: '1rem'
-            }}>
+            <div className="bg-black/40 backdrop-blur-sm border-2 border-[#FF3366]/20 rounded-xl p-4 mb-8 text-[#FF3366] text-center">
               {error}
             </div>
           )}
 
-          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+          <form onSubmit={handleSubmit} className="space-y-6">
             <div>
-              <label htmlFor="name" style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-color)' }}>
+              <label htmlFor="name" className="block text-[#FFB4A2] font-black tracking-tighter mb-2">
                 Festival Name *
               </label>
               <input
@@ -342,17 +294,12 @@ export default function EditFestivalPage() {
                 value={formData.name}
                 onChange={handleChange}
                 placeholder="Enter festival name"
-                style={{
-                  width: '100%',
-                  padding: '0.5rem',
-                  border: '1px solid var(--border-color)',
-                  borderRadius: '0.375rem'
-                }}
+                className="w-full px-4 py-2 bg-black/40 border-2 border-[#FF7A00]/20 rounded-lg text-white placeholder-[#FFB4A2] focus:outline-none focus:border-[#FF7A00]"
               />
             </div>
 
             <div>
-              <label htmlFor="description" style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-color)' }}>
+              <label htmlFor="description" className="block text-[#FFB4A2] font-black tracking-tighter mb-2">
                 Description *
               </label>
               <textarea
@@ -363,18 +310,13 @@ export default function EditFestivalPage() {
                 onChange={handleChange}
                 rows={4}
                 placeholder="Describe your festival"
-                style={{
-                  width: '100%',
-                  padding: '0.5rem',
-                  border: '1px solid var(--border-color)',
-                  borderRadius: '0.375rem'
-                }}
+                className="w-full px-4 py-2 bg-black/40 border-2 border-[#FF7A00]/20 rounded-lg text-white placeholder-[#FFB4A2] focus:outline-none focus:border-[#FF7A00]"
               />
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label htmlFor="city" style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-color)' }}>
+                <label htmlFor="city" className="block text-[#FFB4A2] font-black tracking-tighter mb-2">
                   City *
                 </label>
                 <input
@@ -385,16 +327,11 @@ export default function EditFestivalPage() {
                   value={formData.location.city}
                   onChange={handleChange}
                   placeholder="Enter city"
-                  style={{
-                    width: '100%',
-                    padding: '0.5rem',
-                    border: '1px solid var(--border-color)',
-                    borderRadius: '0.375rem'
-                  }}
+                  className="w-full px-4 py-2 bg-black/40 border-2 border-[#FF7A00]/20 rounded-lg text-white placeholder-[#FFB4A2] focus:outline-none focus:border-[#FF7A00]"
                 />
               </div>
               <div>
-                <label htmlFor="country" style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-color)' }}>
+                <label htmlFor="country" className="block text-[#FFB4A2] font-black tracking-tighter mb-2">
                   Country *
                 </label>
                 <input
@@ -405,62 +342,14 @@ export default function EditFestivalPage() {
                   value={formData.location.country}
                   onChange={handleChange}
                   placeholder="Enter country"
-                  style={{
-                    width: '100%',
-                    padding: '0.5rem',
-                    border: '1px solid var(--border-color)',
-                    borderRadius: '0.375rem'
-                  }}
+                  className="w-full px-4 py-2 bg-black/40 border-2 border-[#FF7A00]/20 rounded-lg text-white placeholder-[#FFB4A2] focus:outline-none focus:border-[#FF7A00]"
                 />
               </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label htmlFor="lat" style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-color)' }}>
-                  Latitude
-                </label>
-                <input
-                  type="number"
-                  id="lat"
-                  name="lat"
-                  step="any"
-                  value={formData.location.coordinates.lat}
-                  onChange={handleChange}
-                  placeholder="Enter latitude"
-                  style={{
-                    width: '100%',
-                    padding: '0.5rem',
-                    border: '1px solid var(--border-color)',
-                    borderRadius: '0.375rem'
-                  }}
-                />
-              </div>
-              <div>
-                <label htmlFor="lng" style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-color)' }}>
-                  Longitude
-                </label>
-                <input
-                  type="number"
-                  id="lng"
-                  name="lng"
-                  step="any"
-                  value={formData.location.coordinates.lng}
-                  onChange={handleChange}
-                  placeholder="Enter longitude"
-                  style={{
-                    width: '100%',
-                    padding: '0.5rem',
-                    border: '1px solid var(--border-color)',
-                    borderRadius: '0.375rem'
-                  }}
-                />
-              </div>
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-              <div>
-                <label htmlFor="startDate" style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-color)' }}>
+                <label htmlFor="startDate" className="block text-[#FFB4A2] font-black tracking-tighter mb-2">
                   Start Date *
                 </label>
                 <input
@@ -470,16 +359,11 @@ export default function EditFestivalPage() {
                   required
                   value={formData.startDate}
                   onChange={handleChange}
-                  style={{
-                    width: '100%',
-                    padding: '0.5rem',
-                    border: '1px solid var(--border-color)',
-                    borderRadius: '0.375rem'
-                  }}
+                  className="w-full px-4 py-2 bg-black/40 border-2 border-[#FF7A00]/20 rounded-lg text-white focus:outline-none focus:border-[#FF7A00]"
                 />
               </div>
               <div>
-                <label htmlFor="endDate" style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-color)' }}>
+                <label htmlFor="endDate" className="block text-[#FFB4A2] font-black tracking-tighter mb-2">
                   End Date *
                 </label>
                 <input
@@ -489,18 +373,13 @@ export default function EditFestivalPage() {
                   required
                   value={formData.endDate}
                   onChange={handleChange}
-                  style={{
-                    width: '100%',
-                    padding: '0.5rem',
-                    border: '1px solid var(--border-color)',
-                    borderRadius: '0.375rem'
-                  }}
+                  className="w-full px-4 py-2 bg-black/40 border-2 border-[#FF7A00]/20 rounded-lg text-white focus:outline-none focus:border-[#FF7A00]"
                 />
               </div>
             </div>
 
             <div>
-              <label htmlFor="genre" style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-color)' }}>
+              <label htmlFor="genre" className="block text-[#FFB4A2] font-black tracking-tighter mb-2">
                 Genre *
               </label>
               <input
@@ -511,23 +390,19 @@ export default function EditFestivalPage() {
                 value={formData.genre}
                 onChange={handleChange}
                 placeholder="Enter festival genre"
-                style={{
-                  width: '100%',
-                  padding: '0.5rem',
-                  border: '1px solid var(--border-color)',
-                  borderRadius: '0.375rem'
-                }}
+                className="w-full px-4 py-2 bg-black/40 border-2 border-[#FF7A00]/20 rounded-lg text-white placeholder-[#FFB4A2] focus:outline-none focus:border-[#FF7A00]"
               />
             </div>
 
             <div>
-              <div style={{ marginBottom: '1rem' }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-color)' }}>
+              <div className="mb-4">
+                <label className="flex items-center gap-2 text-[#FFB4A2] font-black tracking-tighter">
                   <input
                     type="checkbox"
                     name="isFree"
                     checked={formData.isFree}
                     onChange={handleChange}
+                    className="w-4 h-4 bg-black/40 border-2 border-[#FF7A00]/20 rounded focus:outline-none focus:border-[#FF7A00]"
                   />
                   This is a free festival
                 </label>
@@ -535,7 +410,7 @@ export default function EditFestivalPage() {
 
               {!formData.isFree && (
                 <div>
-                  <label htmlFor="price" style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-color)' }}>
+                  <label htmlFor="price" className="block text-[#FFB4A2] font-black tracking-tighter mb-2">
                     Price *
                   </label>
                   <input
@@ -548,19 +423,14 @@ export default function EditFestivalPage() {
                     placeholder="Enter ticket price"
                     min="0"
                     step="0.01"
-                    style={{
-                      width: '100%',
-                      padding: '0.5rem',
-                      border: '1px solid var(--border-color)',
-                      borderRadius: '0.375rem'
-                    }}
+                    className="w-full px-4 py-2 bg-black/40 border-2 border-[#FF7A00]/20 rounded-lg text-white placeholder-[#FFB4A2] focus:outline-none focus:border-[#FF7A00]"
                   />
                 </div>
               )}
             </div>
 
             <div>
-              <label htmlFor="website" style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-color)' }}>
+              <label htmlFor="website" className="block text-[#FFB4A2] font-black tracking-tighter mb-2">
                 Website
               </label>
               <input
@@ -570,18 +440,13 @@ export default function EditFestivalPage() {
                 value={formData.website}
                 onChange={handleChange}
                 placeholder="Enter festival website"
-                style={{
-                  width: '100%',
-                  padding: '0.5rem',
-                  border: '1px solid var(--border-color)',
-                  borderRadius: '0.375rem'
-                }}
+                className="w-full px-4 py-2 bg-black/40 border-2 border-[#FF7A00]/20 rounded-lg text-white placeholder-[#FFB4A2] focus:outline-none focus:border-[#FF7A00]"
               />
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label htmlFor="instagram" style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-color)' }}>
+                <label htmlFor="instagram" className="block text-[#FFB4A2] font-black tracking-tighter mb-2">
                   Instagram
                 </label>
                 <input
@@ -591,16 +456,11 @@ export default function EditFestivalPage() {
                   value={formData.socialLinks.instagram}
                   onChange={handleChange}
                   placeholder="Instagram handle"
-                  style={{
-                    width: '100%',
-                    padding: '0.5rem',
-                    border: '1px solid var(--border-color)',
-                    borderRadius: '0.375rem'
-                  }}
+                  className="w-full px-4 py-2 bg-black/40 border-2 border-[#FF7A00]/20 rounded-lg text-white placeholder-[#FFB4A2] focus:outline-none focus:border-[#FF7A00]"
                 />
               </div>
               <div>
-                <label htmlFor="twitter" style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-color)' }}>
+                <label htmlFor="twitter" className="block text-[#FFB4A2] font-black tracking-tighter mb-2">
                   Twitter
                 </label>
                 <input
@@ -610,18 +470,13 @@ export default function EditFestivalPage() {
                   value={formData.socialLinks.twitter}
                   onChange={handleChange}
                   placeholder="Twitter handle"
-                  style={{
-                    width: '100%',
-                    padding: '0.5rem',
-                    border: '1px solid var(--border-color)',
-                    borderRadius: '0.375rem'
-                  }}
+                  className="w-full px-4 py-2 bg-black/40 border-2 border-[#FF7A00]/20 rounded-lg text-white placeholder-[#FFB4A2] focus:outline-none focus:border-[#FF7A00]"
                 />
               </div>
             </div>
 
             <div>
-              <label htmlFor="imageFile" style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-color)' }}>
+              <label htmlFor="imageFile" className="block text-[#FFB4A2] font-black tracking-tighter mb-2">
                 Festival Image
               </label>
               <input
@@ -630,71 +485,38 @@ export default function EditFestivalPage() {
                 name="imageFile"
                 accept="image/*"
                 onChange={handleFileChange}
-                style={{
-                  width: '100%',
-                  padding: '0.5rem',
-                  border: '1px solid var(--border-color)',
-                  borderRadius: '0.375rem'
-                }}
+                className="w-full px-4 py-2 bg-black/40 border-2 border-[#FF7A00]/20 rounded-lg text-white focus:outline-none focus:border-[#FF7A00]"
               />
             </div>
 
             <div>
-              <div style={{ 
-                display: 'flex', 
-                justifyContent: 'space-between', 
-                alignItems: 'center',
-                marginBottom: '0.5rem'
-              }}>
-                <label style={{ color: 'var(--text-color)' }}>Lineup</label>
+              <div className="flex justify-between items-center mb-4">
+                <label className="text-[#FFB4A2] font-black tracking-tighter">Lineup</label>
                 <button
                   type="button"
                   onClick={addLineupArtist}
-                  style={{
-                    padding: '0.25rem 0.5rem',
-                    backgroundColor: 'var(--primary-color)',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '0.375rem',
-                    cursor: 'pointer'
-                  }}
+                  className="px-4 py-2 bg-[#FF7A00] text-black font-black tracking-tighter rounded-lg hover:bg-[#FF3366] hover:text-white transition-all duration-300"
                 >
                   Add Artist
                 </button>
               </div>
               {formData.lineup.map((artist, index) => (
-                <div key={index} style={{ 
-                  display: 'flex',
-                  gap: '0.5rem',
-                  marginBottom: '0.5rem'
-                }}>
+                <div key={index} className="flex gap-2 mb-2">
                   <input
                     type="text"
                     name={`lineup-${index}`}
                     value={artist}
                     onChange={handleChange}
                     placeholder={`Artist ${index + 1}`}
-                    style={{
-                      flex: 1,
-                      padding: '0.5rem',
-                      border: '1px solid var(--border-color)',
-                      borderRadius: '0.375rem'
-                    }}
+                    className="flex-1 px-4 py-2 bg-black/40 border-2 border-[#FF7A00]/20 rounded-lg text-white placeholder-[#FFB4A2] focus:outline-none focus:border-[#FF7A00]"
                   />
-                  {formData.lineup.length > 1 && (
+                  {index > 0 && (
                     <button
                       type="button"
                       onClick={() => removeLineupArtist(index)}
-                      style={{
-                        padding: '0.5rem',
-                        backgroundColor: '#dc2626',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '0.375rem',
-                        cursor: 'pointer'
-                      }}
+                      className="px-4 py-2 bg-[#FF3366] text-white font-black tracking-tighter rounded-lg hover:bg-[#FF7A00] hover:text-black transition-all duration-300"
                     >
-                      ×
+                      Remove
                     </button>
                   )}
                 </div>
@@ -704,36 +526,20 @@ export default function EditFestivalPage() {
             <button
               type="submit"
               disabled={loading}
-              style={{
-                width: '100%',
-                backgroundColor: 'var(--primary-color)',
-                color: 'white',
-                padding: '0.75rem',
-                borderRadius: '0.375rem',
-                fontSize: '1rem',
-                fontWeight: '500',
-                cursor: loading ? 'not-allowed' : 'pointer',
-                opacity: loading ? 0.7 : 1,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '0.5rem'
-              }}
+              className="w-full px-6 py-3 bg-[#FF7A00] text-black font-black tracking-tighter rounded-lg hover:bg-[#FF3366] hover:text-white transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? (
-                <>
-                  <div style={{ width: '20px', height: '20px' }}>
-                    <LoadingSpinner />
-                  </div>
-                  Updating Festival...
-                </>
+                <div className="flex items-center justify-center gap-2">
+                  <LoadingSpinner />
+                  <span>Updating Festival...</span>
+                </div>
               ) : (
                 'Update Festival'
               )}
             </button>
           </form>
         </div>
-      </div>
+      </main>
     </div>
   );
 } 

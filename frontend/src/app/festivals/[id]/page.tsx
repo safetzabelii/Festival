@@ -155,7 +155,7 @@ export default function FestivalDetailsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-black">
+      <div className="min-h-screen bg-gradient-to-br from-black via-black to-[#FF7A00]/20">
         <Navbar />
         <div className="max-w-7xl mx-auto px-4 py-20">
           <div className="text-center">
@@ -172,7 +172,7 @@ export default function FestivalDetailsPage() {
 
   if (error || !festival) {
     return (
-      <div className="min-h-screen bg-black">
+      <div className="min-h-screen bg-gradient-to-br from-black via-black to-[#FF7A00]/20">
         <Navbar />
         <div className="max-w-7xl mx-auto px-4 py-20">
           <div className="text-center text-[#FF3366]">
@@ -184,55 +184,10 @@ export default function FestivalDetailsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-black">
+    <div className="min-h-screen bg-gradient-to-br from-black via-black to-[#FF7A00]/20">
       <Navbar />
       
-      {/* Background gradients */}
-      <motion.div 
-        className="fixed inset-0 overflow-hidden opacity-30 pointer-events-none"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 0.3 }}
-        transition={{ duration: 1 }}
-      >
-        <motion.div 
-          className="absolute -top-1/2 -left-1/2 w-full h-full bg-[#FF7A00] rounded-full blur-[150px]"
-          animate={{ 
-            scale: [1, 1.1, 1],
-            opacity: [0.4, 0.6, 0.4]
-          }}
-          transition={{
-            duration: 4,
-            repeat: Infinity,
-            ease: "easeInOut"
-          }}
-        />
-        <motion.div 
-          className="absolute top-0 right-0 w-1/2 h-1/2 bg-[#FF3366] rounded-full blur-[120px]"
-          animate={{ 
-            scale: [1.1, 1, 1.1],
-            opacity: [0.3, 0.5, 0.3]
-          }}
-          transition={{
-            duration: 5,
-            repeat: Infinity,
-            ease: "easeInOut",
-            delay: 0.5
-          }}
-        />
-        <motion.div 
-          className="absolute bottom-0 left-1/4 w-1/2 h-1/2 bg-[#FFD600] rounded-full blur-[130px]"
-          animate={{ 
-            scale: [1, 1.2, 1],
-            opacity: [0.2, 0.4, 0.2]
-          }}
-          transition={{
-            duration: 6,
-            repeat: Infinity,
-            ease: "easeInOut",
-            delay: 1
-          }}
-        />
-      </motion.div>
+      <div className="fixed inset-0 bg-[#FF7A00]/5 backdrop-blur-3xl pointer-events-none" />
 
       <main className="relative z-10 max-w-7xl mx-auto px-4 py-20">
         <motion.div

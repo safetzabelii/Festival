@@ -75,7 +75,6 @@ export default function AdminDashboard() {
       }
       
       const statsData = await statsResponse.json();
-      console.log('Admin stats data:', statsData);
       setStats(statsData);
     } catch (err) {
       console.error('Error fetching data:', err);
@@ -86,37 +85,22 @@ export default function AdminDashboard() {
   };
 
   useEffect(() => {
+    if (user === null) {
+      // User is still loading, do nothing
+      return;
+    }
+    
+    if (user && !user.isAdmin) {
+      if (window.history.length > 1) {
+        router.back();
+      } else {
+        router.push('/');
+      }
+      return;
+    }
+    
     fetchData();
-
-    // Set up event listeners for stats updates
-    const handleLikeUpdate = (event: any) => {
-      console.log('Like update event received:', event.detail);
-      if (stats) {
-        setStats({
-          ...stats,
-          totalLikes: event.detail.totalLikes
-        });
-      }
-    };
-
-    const handleGoingUpdate = (event: any) => {
-      console.log('Going update event received:', event.detail);
-      if (stats) {
-        setStats({
-          ...stats,
-          totalGoingTo: event.detail.totalGoingTo
-        });
-      }
-    };
-
-    window.addEventListener('festivalLikeUpdate', handleLikeUpdate);
-    window.addEventListener('festivalGoingUpdate', handleGoingUpdate);
-
-    return () => {
-      window.removeEventListener('festivalLikeUpdate', handleLikeUpdate);
-      window.removeEventListener('festivalGoingUpdate', handleGoingUpdate);
-    };
-  }, []);
+  }, [user, router]);
 
   const handleDelete = async (festivalId: string) => {
     if (!confirm('Are you sure you want to delete this festival?')) return;
@@ -147,272 +131,179 @@ export default function AdminDashboard() {
 
   if (!user || !user.isAdmin) {
     return (
-      <div style={{ minHeight: '100vh', backgroundColor: 'var(--background-color)' }}>
+      <div className="min-h-screen bg-black">
         <Navbar />
-        <div style={{ 
-          maxWidth: '80rem',
-          marginLeft: 'auto',
-          marginRight: 'auto',
-          padding: '3rem 1rem',
-          textAlign: 'center'
-        }}>
-          <p style={{ color: '#dc2626' }}>Access Denied: Admin privileges required</p>
+        <div className="max-w-7xl mx-auto px-4 py-20">
+          <div className="text-center text-[#FF3366]">Access Denied: Admin privileges required</div>
         </div>
       </div>
     );
   }
 
+  if (loading) {
+    return <LoadingSpinner />;
+  }
+
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: 'var(--background-color)' }}>
+    <div className="min-h-screen bg-black">
       <Navbar />
-      <div style={{ 
-        maxWidth: '80rem',
-        marginLeft: 'auto',
-        marginRight: 'auto',
-        padding: '3rem 1rem'
-      }}>
-        <div style={{ marginBottom: '2rem' }}>
-          <h1 style={{ 
-            fontSize: '2.25rem',
-            fontWeight: 'bold',
-            color: 'var(--text-color)',
-            marginBottom: '1rem'
-          }}>
-            Admin Dashboard
-          </h1>
-          <div style={{ display: 'flex', gap: '1rem', marginBottom: '2rem' }}>
-            <button
-              onClick={() => setActiveTab('overview')}
-              style={{
-                padding: '0.5rem 1rem',
-                backgroundColor: activeTab === 'overview' ? 'var(--primary-color)' : 'transparent',
-                color: activeTab === 'overview' ? 'white' : 'var(--text-color)',
-                border: '1px solid var(--border-color)',
-                borderRadius: '0.375rem',
-                cursor: 'pointer'
-              }}
-            >
-              Overview
-            </button>
-            <button
-              onClick={() => setActiveTab('festivals')}
-              style={{
-                padding: '0.5rem 1rem',
-                backgroundColor: activeTab === 'festivals' ? 'var(--primary-color)' : 'transparent',
-                color: activeTab === 'festivals' ? 'white' : 'var(--text-color)',
-                border: '1px solid var(--border-color)',
-                borderRadius: '0.375rem',
-                cursor: 'pointer'
-              }}
-            >
-              Festivals
-            </button>
-            <button
-              onClick={() => setActiveTab('tools')}
-              style={{
-                padding: '0.5rem 1rem',
-                backgroundColor: activeTab === 'tools' ? 'var(--primary-color)' : 'transparent',
-                color: activeTab === 'tools' ? 'white' : 'var(--text-color)',
-                border: '1px solid var(--border-color)',
-                borderRadius: '0.375rem',
-                cursor: 'pointer'
-              }}
-            >
-              Admin Tools
-            </button>
-          </div>
+      <main className="relative z-10 max-w-7xl mx-auto px-4 py-20">
+        <h1 className="text-8xl font-black tracking-tighter lowercase text-center mb-4 bg-gradient-to-r from-[#FF7A00] via-[#FFD600] to-[#FF3366] text-transparent bg-clip-text">
+          admin
+        </h1>
+        <p className="text-2xl text-[#FFB4A2] text-center mb-16 font-black tracking-tight lowercase">
+          manage your festival platform
+        </p>
+
+        <div className="flex justify-center gap-4 mb-8">
+          <button
+            onClick={() => setActiveTab('overview')}
+            className={`px-6 py-2 text-lg font-black tracking-tighter transition-colors duration-300 ${
+              activeTab === 'overview'
+                ? 'bg-[#FF7A00] text-black'
+                : 'text-[#FFB4A2] hover:text-[#FFD600]'
+            }`}
+          >
+            Overview
+          </button>
+          <button
+            onClick={() => setActiveTab('festivals')}
+            className={`px-6 py-2 text-lg font-black tracking-tighter transition-colors duration-300 ${
+              activeTab === 'festivals'
+                ? 'bg-[#FF7A00] text-black'
+                : 'text-[#FFB4A2] hover:text-[#FFD600]'
+            }`}
+          >
+            Festivals
+          </button>
+          <button
+            onClick={() => setActiveTab('tools')}
+            className={`px-6 py-2 text-lg font-black tracking-tighter transition-colors duration-300 ${
+              activeTab === 'tools'
+                ? 'bg-[#FF7A00] text-black'
+                : 'text-[#FFB4A2] hover:text-[#FFD600]'
+            }`}
+          >
+            Admin Tools
+          </button>
         </div>
 
         {error && (
-          <div style={{ 
-            backgroundColor: '#fef2f2',
-            color: '#dc2626',
-            padding: '0.75rem 1rem',
-            borderRadius: '0.375rem',
-            marginBottom: '1rem'
-          }}>
+          <div className="bg-black/40 backdrop-blur-sm border-2 border-[#FF3366]/20 rounded-xl p-4 mb-8 text-[#FF3366] text-center">
             {error}
           </div>
         )}
 
-        {loading ? (
-          <LoadingSpinner />
-        ) : (
-          <>
-            {activeTab === 'overview' && stats && (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
-                <div style={{ backgroundColor: 'white', padding: '1.5rem', borderRadius: '0.5rem', boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)' }}>
-                  <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>Total Festivals</h3>
-                  <p style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--primary-color)' }}>{stats.totalFestivals}</p>
-                </div>
-                <div style={{ backgroundColor: 'white', padding: '1.5rem', borderRadius: '0.5rem', boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)' }}>
-                  <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>Pending Approval</h3>
-                  <p style={{ fontSize: '2rem', fontWeight: 'bold', color: '#dc2626' }}>{stats.pendingApproval}</p>
-                </div>
-                <div style={{ backgroundColor: 'white', padding: '1.5rem', borderRadius: '0.5rem', boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)' }}>
-                  <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>Total Likes</h3>
-                  <p style={{ fontSize: '2rem', fontWeight: 'bold', color: '#e11d48' }}>{stats.totalLikes}</p>
-                </div>
-                <div style={{ backgroundColor: 'white', padding: '1.5rem', borderRadius: '0.5rem', boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)' }}>
-                  <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>Total Going</h3>
-                  <p style={{ fontSize: '2rem', fontWeight: 'bold', color: '#059669' }}>{stats.totalGoingTo}</p>
-                </div>
-              </div>
-            )}
-
-            {activeTab === 'festivals' && (
-              <div style={{ backgroundColor: 'white', padding: '1.5rem', borderRadius: '0.5rem', boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                  <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>All Festivals</h2>
-                  <Link
-                    href="/create-festival"
-                    style={{
-                      backgroundColor: 'var(--primary-color)',
-                      color: 'white',
-                      padding: '0.5rem 1rem',
-                      borderRadius: '0.375rem',
-                      textDecoration: 'none'
-                    }}
-                  >
-                    Create New Festival
-                  </Link>
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1rem' }}>
-                  {festivals.map(festival => (
-                    <div key={festival._id} style={{ 
-                      border: '1px solid var(--border-color)',
-                      borderRadius: '0.5rem',
-                      padding: '1rem'
-                    }}>
-                      <h3 style={{ 
-                        fontSize: '1.25rem',
-                        fontWeight: 'bold',
-                        marginBottom: '0.5rem'
-                      }}>
-                        {festival.name}
-                      </h3>
-                      <p style={{ 
-                        color: 'var(--text-secondary)',
-                        marginBottom: '0.5rem'
-                      }}>
-                        {festival.location.city}, {festival.location.country}
-                      </p>
-                      <p style={{ 
-                        color: 'var(--text-secondary)',
-                        marginBottom: '1rem'
-                      }}>
-                        {new Date(festival.startDate).toLocaleDateString()} - {new Date(festival.endDate).toLocaleDateString()}
-                      </p>
-                      <div style={{ 
-                        display: 'flex',
-                        gap: '0.5rem',
-                        marginBottom: '0.5rem'
-                      }}>
-                        <span style={{ color: '#e11d48' }}>♥ {festival.likes || 0}</span>
-                        <span style={{ color: '#059669' }}>👥 {festival.goingTo || 0}</span>
-                      </div>
-                      <div style={{ 
-                        display: 'flex',
-                        gap: '0.5rem'
-                      }}>
-                        <Link
-                          href={`/festivals/${festival._id}/edit`}
-                          style={{
-                            flex: 1,
-                            backgroundColor: 'var(--primary-color)',
-                            color: 'white',
-                            padding: '0.5rem',
-                            borderRadius: '0.375rem',
-                            textAlign: 'center',
-                            textDecoration: 'none'
-                          }}
-                        >
-                          Edit
-                        </Link>
-                        <button
-                          onClick={() => handleDelete(festival._id)}
-                          style={{
-                            flex: 1,
-                            backgroundColor: '#dc2626',
-                            color: 'white',
-                            padding: '0.5rem',
-                            borderRadius: '0.375rem',
-                            border: 'none',
-                            cursor: 'pointer'
-                          }}
-                        >
-                          Delete
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {activeTab === 'tools' && (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1rem' }}>
-                <Link
-                  href="/admin/pending-festivals"
-                  style={{
-                    backgroundColor: 'white',
-                    padding: '1.5rem',
-                    borderRadius: '0.5rem',
-                    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
-                    textDecoration: 'none',
-                    color: 'var(--text-color)'
-                  }}
-                >
-                  <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>Pending Festivals</h3>
-                  <p>Review and approve festivals created by non-admin users</p>
-                </Link>
-                <Link
-                  href="/admin/export-data"
-                  style={{
-                    backgroundColor: 'white',
-                    padding: '1.5rem',
-                    borderRadius: '0.5rem',
-                    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
-                    textDecoration: 'none',
-                    color: 'var(--text-color)'
-                  }}
-                >
-                  <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>Export Data</h3>
-                  <p>Download festival and user data</p>
-                </Link>
-                <Link
-                  href="/admin/analytics"
-                  style={{
-                    backgroundColor: 'white',
-                    padding: '1.5rem',
-                    borderRadius: '0.5rem',
-                    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
-                    textDecoration: 'none',
-                    color: 'var(--text-color)'
-                  }}
-                >
-                  <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>Analytics</h3>
-                  <p>View detailed festival statistics and trends</p>
-                </Link>
-                <Link
-                  href="/admin/user-management"
-                  style={{
-                    backgroundColor: 'white',
-                    padding: '1.5rem',
-                    borderRadius: '0.5rem',
-                    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
-                    textDecoration: 'none',
-                    color: 'var(--text-color)'
-                  }}
-                >
-                  <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>User Management</h3>
-                  <p>Manage user roles and permissions</p>
-                </Link>
-              </div>
-            )}
-          </>
+        {activeTab === 'overview' && stats && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <div className="bg-black/40 backdrop-blur-sm border-2 border-[#FF7A00]/20 rounded-xl p-6">
+              <h3 className="text-lg font-black tracking-tighter text-[#FFB4A2] mb-2">Total Festivals</h3>
+              <p className="text-3xl font-black text-[#FF7A00]">{stats.totalFestivals}</p>
+            </div>
+            <div className="bg-black/40 backdrop-blur-sm border-2 border-[#FF3366]/20 rounded-xl p-6">
+              <h3 className="text-lg font-black tracking-tighter text-[#FFB4A2] mb-2">Pending Approval</h3>
+              <p className="text-3xl font-black text-[#FF3366]">{stats.pendingApproval}</p>
+            </div>
+            <div className="bg-black/40 backdrop-blur-sm border-2 border-[#FFD600]/20 rounded-xl p-6">
+              <h3 className="text-lg font-black tracking-tighter text-[#FFB4A2] mb-2">Total Likes</h3>
+              <p className="text-3xl font-black text-[#FFD600]">{stats.totalLikes}</p>
+            </div>
+            <div className="bg-black/40 backdrop-blur-sm border-2 border-[#FF7A00]/20 rounded-xl p-6">
+              <h3 className="text-lg font-black tracking-tighter text-[#FFB4A2] mb-2">Total Going</h3>
+              <p className="text-3xl font-black text-[#FF7A00]">{stats.totalGoingTo}</p>
+            </div>
+          </div>
         )}
-      </div>
+
+        {activeTab === 'festivals' && (
+          <div className="bg-black/40 backdrop-blur-sm border-2 border-[#FF7A00]/20 rounded-xl p-6">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-black tracking-tighter text-white">All Festivals</h2>
+              <Link
+                href="/create-festival"
+                className="px-6 py-2 bg-[#FF7A00] text-black font-black tracking-tighter rounded-lg hover:bg-[#FF3366] hover:text-white transition-all duration-300"
+              >
+                Create New Festival
+              </Link>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {festivals.map(festival => (
+                <div
+                  key={festival._id}
+                  className="bg-black/40 backdrop-blur-sm border-2 border-[#FF7A00]/20 rounded-xl p-6"
+                >
+                  <h3 className="text-xl font-black tracking-tighter text-white mb-2">
+                    {festival.name}
+                  </h3>
+                  <p className="text-[#FFB4A2] mb-2">
+                    {festival.location.city}, {festival.location.country}
+                  </p>
+                  <p className="text-[#FFB4A2] mb-4">
+                    {new Date(festival.startDate).toLocaleDateString()} - {new Date(festival.endDate).toLocaleDateString()}
+                  </p>
+                  <div className="flex items-center gap-6 mb-6">
+                    <div className="flex items-center gap-2 bg-[#FF3366]/10 border border-[#FF3366]/30 rounded-lg px-4 py-2">
+                      <span className="text-2xl text-[#FF3366]">♥</span>
+                      <span className="text-[#FFB4A2] font-black tracking-tighter">{festival.likes || 0}</span>
+                    </div>
+                    <div className="flex items-center gap-2 bg-[#FFD600]/10 border border-[#FFD600]/30 rounded-lg px-4 py-2">
+                      <span className="text-2xl text-[#FFD600]">👤</span>
+                      <span className="text-[#FFB4A2] font-black tracking-tighter">{festival.goingTo || 0}</span>
+                    </div>
+                  </div>
+                  <div className="flex gap-4">
+                    <Link
+                      href={`/festivals/${festival._id}/edit`}
+                      className="flex-1 px-6 py-2 bg-[#FF7A00] text-black font-black tracking-tighter rounded-lg hover:bg-[#FF3366] hover:text-white transition-all duration-300 text-center"
+                    >
+                      Edit
+                    </Link>
+                    <button
+                      onClick={() => handleDelete(festival._id)}
+                      className="flex-1 px-6 py-2 bg-[#FF3366] text-black font-black tracking-tighter rounded-lg hover:bg-[#FF7A00] hover:text-white transition-all duration-300"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'tools' && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <Link
+              href="/admin/pending-festivals"
+              className="bg-black/40 backdrop-blur-sm border-2 border-[#FF7A00]/20 rounded-xl p-6 hover:border-[#FF3366]/20 transition-colors duration-300"
+            >
+              <h3 className="text-xl font-black tracking-tighter text-white mb-2">Pending Festivals</h3>
+              <p className="text-[#FFB4A2]">Review and approve festivals created by non-admin users</p>
+            </Link>
+            <Link
+              href="/admin/export-data"
+              className="bg-black/40 backdrop-blur-sm border-2 border-[#FF7A00]/20 rounded-xl p-6 hover:border-[#FF3366]/20 transition-colors duration-300"
+            >
+              <h3 className="text-xl font-black tracking-tighter text-white mb-2">Export Data</h3>
+              <p className="text-[#FFB4A2]">Download festival and user data</p>
+            </Link>
+            <Link
+              href="/admin/analytics"
+              className="bg-black/40 backdrop-blur-sm border-2 border-[#FF7A00]/20 rounded-xl p-6 hover:border-[#FF3366]/20 transition-colors duration-300"
+            >
+              <h3 className="text-xl font-black tracking-tighter text-white mb-2">Analytics</h3>
+              <p className="text-[#FFB4A2]">View detailed festival statistics and trends</p>
+            </Link>
+            <Link
+              href="/admin/user-management"
+              className="bg-black/40 backdrop-blur-sm border-2 border-[#FF7A00]/20 rounded-xl p-6 hover:border-[#FF3366]/20 transition-colors duration-300"
+            >
+              <h3 className="text-xl font-black tracking-tighter text-white mb-2">User Management</h3>
+              <p className="text-[#FFB4A2]">Manage user roles and permissions</p>
+            </Link>
+          </div>
+        )}
+      </main>
     </div>
   );
 } 

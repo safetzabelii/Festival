@@ -1,0 +1,183 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+/* Import Arial Black for that exact BRAT font look */
+@font-face {
+  font-family: 'Arial Black';
+  src: local('Arial Black');
+  font-weight: 900;
+}
+
+:root {
+  --summer-orange: #FF7A00;  /* Warm sunset orange */
+  --summer-yellow: #FFD600;  /* Bright summer yellow */
+  --summer-pink: #FF3366;    /* Vibrant summer pink */
+  --summer-peach: #FFB4A2;   /* Soft peach */
+  --primary-color: var(--summer-orange);
+  --primary-hover: #FF9500;
+  --background-color: #000000;
+  --text-color: #FFFFFF;
+  --text-secondary: #FFB4A2;
+  --border-color: var(--summer-orange);
+  --foreground-rgb: 0, 0, 0;
+  --background-start-rgb: 249, 250, 251;
+  --background-end-rgb: 249, 250, 251;
+}
+
+@font-face {
+  font-family: 'Helvetica Neue';
+  src: url('/fonts/HelveticaNeue-Bold.woff2') format('woff2');
+  font-weight: bold;
+  font-style: normal;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --foreground-rgb: 255, 255, 255;
+    --background-start-rgb: 17, 24, 39;
+    --background-end-rgb: 17, 24, 39;
+  }
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Arial Black', system-ui, -apple-system, sans-serif;
+  background-color: var(--background-color);
+  color: var(--text-color);
+  line-height: 1;
+  letter-spacing: -0.03em;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Text and Link Styles */
+a {
+  text-decoration: none;
+  color: inherit;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Arial Black', system-ui, -apple-system, sans-serif;
+  font-weight: 900;
+  text-transform: lowercase;  /* BRAT uses lowercase */
+  line-height: 0.9;
+  letter-spacing: -0.03em;
+}
+
+/* Form Styles */
+input,
+textarea,
+select {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background-color: white;
+  font-size: 1rem;
+  color: var(--text-color);
+  transition: border-color 0.2s ease;
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.1);
+}
+
+label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+  color: var(--text-color);
+}
+
+/* Button Styles */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-decoration: none;
+}
+
+.btn-primary {
+  background-color: var(--primary-color);
+  color: white;
+}
+
+.btn-primary:hover {
+  background-color: var(--primary-hover);
+}
+
+/* Card Styles */
+.card {
+  background-color: white;
+  border-radius: 0.5rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+/* Container Styles */
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 1rem;
+}
+
+/* Grid Styles */
+.grid {
+  display: grid;
+  gap: 1.5rem;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+}
+
+/* Error Message Styles */
+.error-message {
+  background-color: #fee2e2;
+  border: 1px solid #fecaca;
+  color: #991b1b;
+  padding: 1rem;
+  border-radius: 6px;
+  margin-bottom: 1rem;
+}
+
+/* Success Message Styles */
+.success-message {
+  background-color: #dcfce7;
+  border: 1px solid #bbf7d0;
+  color: #166534;
+  padding: 1rem;
+  border-radius: 6px;
+  margin-bottom: 1rem;
+}
+
+/* Media Queries */
+@media (max-width: 640px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .container {
+    padding: 1rem 0.5rem;
+  }
+}

@@ -11,6 +11,7 @@ import festivalRoutes from './routes/festivalRoutes';
 import commentRoutes from './routes/commentRoutes';
 import notificationRoutes from './routes/notificationRoutes';
 import adminRoutes from './routes/adminRoutes';
+import topicRoutes from './routes/topicRoutes';
 import mongoose from 'mongoose';
 import path from 'path';
 
@@ -56,6 +57,7 @@ app.use('/api/festivals', festivalRoutes);
 app.use('/api/comments', commentRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/topics', topicRoutes);
 
 //startReminderScheduler();
 

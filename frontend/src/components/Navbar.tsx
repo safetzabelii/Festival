@@ -36,6 +36,13 @@ export default function Navbar() {
             festivals
           </Link>
           
+          <Link 
+            href="/discussions" 
+            className="text-lg font-black tracking-tighter lowercase text-white hover:text-[#FFD600] transition-colors"
+          >
+            discussions
+          </Link>
+          
           {mounted && !authLoading && (
             <>
               {user ? (

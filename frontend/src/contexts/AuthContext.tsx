@@ -44,6 +44,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (response.ok) {
         const userData = await response.json();
         setUser(userData);
+        if (userData && userData._id) {
+          localStorage.setItem('userId', userData._id);
+        }
       } else {
         localStorage.removeItem('token');
         setUser(null);
@@ -82,6 +85,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       const data = await response.json();
       localStorage.setItem('token', data.token);
+      if (data.user && data.user._id) {
+        localStorage.setItem('userId', data.user._id);
+      }
       await checkUser();
       refreshCurrentPage();
     } catch (error) {
@@ -109,6 +115,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       const data = await response.json();
       localStorage.setItem('token', data.token);
+      if (data.user && data.user._id) {
+        localStorage.setItem('userId', data.user._id);
+      }
       await checkUser();
       refreshCurrentPage();
     } catch (error) {
@@ -123,6 +132,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       await new Promise(resolve => setTimeout(resolve, 500));
       localStorage.removeItem('token');
+      localStorage.removeItem('userId');
       setUser(null);
       router.push('/');
       router.refresh();

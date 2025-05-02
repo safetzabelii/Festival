@@ -4,9 +4,22 @@ import Link from 'next/link';
 import Navbar from '@/components/Navbar';
 import { useAuth } from '@/contexts/AuthContext';
 import { motion } from 'framer-motion';
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 
 export default function Home() {
   const { user, loading } = useAuth();
+  const [showLoginButton, setShowLoginButton] = useState(false);
+  const [loadingStates, setLoadingStates] = useState({
+    discover: false,
+    create: false,
+    connect: false
+  });
+  const router = useRouter();
+
+  useEffect(() => {
+    setShowLoginButton(!loading && !user);
+  }, [loading, user]);
 
   const fadeIn = {
     initial: { opacity: 0, y: 20 },
@@ -20,6 +33,11 @@ export default function Home() {
         staggerChildren: 0.1
       }
     }
+  };
+
+  const handleNavigation = (path: string, card: 'discover' | 'create' | 'connect') => {
+    setLoadingStates(prev => ({ ...prev, [card]: true }));
+    router.push(path);
   };
 
   return (
@@ -135,12 +153,15 @@ export default function Home() {
               <div className="border-2 border-[#FF7A00]/30 bg-black/50 backdrop-blur-sm p-8 h-full transform group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform duration-300">
                 <h2 className="text-4xl font-black mb-4 lowercase tracking-tighter text-[#FF7A00]">discover</h2>
                 <p className="text-[#FFB4A2] mb-8 lowercase tracking-tight text-lg">find the best festivals around the world</p>
-                <Link 
-                  href="/festivals" 
-                  className="inline-block border-[3px] border-[#FF7A00] text-[#FF7A00] px-8 py-3 hover:bg-[#FF7A00] hover:text-black transition-all duration-300 lowercase tracking-tight text-xl font-black"
+                <button 
+                  onClick={() => handleNavigation('/festivals', 'discover')}
+                  disabled={loadingStates.discover}
+                  className="inline-block border-[3px] border-[#FF7A00] text-[#FF7A00] px-8 py-3 hover:bg-[#FF7A00] hover:text-black transition-all duration-300 lowercase tracking-tight text-xl font-black disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  browse
-                </Link>
+                  {loadingStates.discover ? (
+                    <div className="w-6 h-6 border-2 border-[#FF7A00] border-t-transparent rounded-full animate-spin mx-auto" />
+                  ) : 'browse'}
+                </button>
               </div>
             </motion.div>
 
@@ -153,12 +174,15 @@ export default function Home() {
               <div className="border-2 border-[#FF3366]/30 bg-black/50 backdrop-blur-sm p-8 h-full transform group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform duration-300">
                 <h2 className="text-4xl font-black mb-4 lowercase tracking-tighter text-[#FF3366]">create</h2>
                 <p className="text-[#FFB4A2] mb-8 lowercase tracking-tight text-lg">share your festival with the world</p>
-                <Link 
-                  href="/create-festival" 
-                  className="inline-block border-[3px] border-[#FF3366] text-[#FF3366] px-8 py-3 hover:bg-[#FF3366] hover:text-black transition-all duration-300 lowercase tracking-tight text-xl font-black"
+                <button 
+                  onClick={() => handleNavigation('/create-festival', 'create')}
+                  disabled={loadingStates.create}
+                  className="inline-block border-[3px] border-[#FF3366] text-[#FF3366] px-8 py-3 hover:bg-[#FF3366] hover:text-black transition-all duration-300 lowercase tracking-tight text-xl font-black disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  start
-                </Link>
+                  {loadingStates.create ? (
+                    <div className="w-6 h-6 border-2 border-[#FF3366] border-t-transparent rounded-full animate-spin mx-auto" />
+                  ) : 'start'}
+                </button>
               </div>
             </motion.div>
 
@@ -171,13 +195,16 @@ export default function Home() {
               <div className="border-2 border-[#FFD600]/30 bg-black/50 backdrop-blur-sm p-8 h-full transform group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform duration-300">
                 <h2 className="text-4xl font-black mb-4 lowercase tracking-tighter text-[#FFD600]">connect</h2>
                 <p className="text-[#FFB4A2] mb-8 lowercase tracking-tight text-lg">meet fellow festival-goers</p>
-                {!loading && !user && (
-                  <Link 
-                    href="/login" 
-                    className="inline-block border-[3px] border-[#FFD600] text-[#FFD600] px-8 py-3 hover:bg-[#FFD600] hover:text-black transition-all duration-300 lowercase tracking-tight text-xl font-black"
+                {showLoginButton && (
+                  <button 
+                    onClick={() => handleNavigation('/login', 'connect')}
+                    disabled={loadingStates.connect}
+                    className="inline-block border-[3px] border-[#FFD600] text-[#FFD600] px-8 py-3 hover:bg-[#FFD600] hover:text-black transition-all duration-300 lowercase tracking-tight text-xl font-black disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    join
-                  </Link>
+                    {loadingStates.connect ? (
+                      <div className="w-6 h-6 border-2 border-[#FFD600] border-t-transparent rounded-full animate-spin mx-auto" />
+                    ) : 'join'}
+                  </button>
                 )}
               </div>
             </motion.div>

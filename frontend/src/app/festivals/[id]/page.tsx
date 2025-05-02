@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import Navbar from '@/components/Navbar';
 import { motion } from 'framer-motion';
+import Discussion from '@/components/Discussion';
 
 interface Location {
   city: string;
@@ -359,6 +360,15 @@ export default function FestivalDetailsPage() {
                 </a>
               </motion.div>
             )}
+
+            <motion.div
+              className="mt-12"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.7 }}
+            >
+              <Discussion festivalId={festival._id} />
+            </motion.div>
           </div>
         </motion.div>
       </main>

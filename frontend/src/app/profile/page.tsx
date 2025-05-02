@@ -8,6 +8,7 @@ import Link from 'next/link';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { motion } from 'framer-motion';
 import Image from 'next/image';
+import ProfileSettings from '@/components/ProfileSettings';
 
 interface Festival {
   _id: string;
@@ -36,6 +37,11 @@ interface UserProfile {
   avatar?: string;
   liked: Festival[];
   goingTo: Festival[];
+  socialLinks?: {
+    instagram?: string;
+    twitter?: string;
+    website?: string;
+  };
 }
 
 export default function ProfilePage() {
@@ -44,37 +50,37 @@ export default function ProfilePage() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'liked' | 'going'>('liked');
+  const [activeTab, setActiveTab] = useState<'liked' | 'going' | 'settings'>('liked');
+
+  const fetchProfile = async () => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      router.push('/login');
+      return;
+    }
+
+    try {
+      const response = await fetch('http://localhost:5000/api/users/me', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch profile');
+      }
+
+      const data = await response.json();
+      setProfile(data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An error occurred');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchProfile = async () => {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        router.push('/login');
-        return;
-      }
-
-      try {
-        const response = await fetch('http://localhost:5000/api/users/me', {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        });
-
-        if (!response.ok) {
-          throw new Error('Failed to fetch profile');
-        }
-
-        const data = await response.json();
-        setProfile(data);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'An error occurred');
-      } finally {
-        setLoading(false);
-      }
-    };
-
     if (!authLoading && !user) {
       router.push('/login');
     } else {
@@ -115,6 +121,12 @@ export default function ProfilePage() {
     return `${location.city}, ${location.country}`;
   };
 
+  const handleProfileUpdate = async (updatedProfile: UserProfile) => {
+    setLoading(true);
+    await fetchProfile();
+    setLoading(false);
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-black via-black to-[#FF7A00]/20">
       <Navbar />
@@ -143,9 +155,9 @@ export default function ProfilePage() {
         >
           <div className="flex items-center gap-8">
             <div className="relative w-24 h-24 rounded-full overflow-hidden border-2 border-[#FF7A00]">
-              {profile.avatar ? (
+              {profile?.avatar ? (
                 <Image
-                  src={profile.avatar}
+                  src={getImageUrl(profile.avatar)}
                   alt={profile.name}
                   fill
                   className="object-cover"
@@ -171,9 +183,43 @@ export default function ProfilePage() {
             
             <div>
               <h2 className="text-3xl font-black tracking-tighter text-white mb-2">
-                {profile.name}
+                {profile?.name}
               </h2>
-              <p className="text-[#FFB4A2] text-lg">{profile.email}</p>
+              <div className="flex gap-4 mt-2">
+                {profile?.socialLinks?.instagram && (
+                  <a
+                    href={`https://instagram.com/${profile.socialLinks.instagram}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1 text-[#FFB4A2] hover:text-[#FF7A00] font-bold"
+                  >
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="inline-block"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.5" y2="6.5"/></svg>
+                    @{profile.socialLinks.instagram}
+                  </a>
+                )}
+                {profile?.socialLinks?.twitter && (
+                  <a
+                    href={`https://twitter.com/${profile.socialLinks.twitter}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1 text-[#FFB4A2] hover:text-[#FF7A00] font-bold"
+                  >
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="inline-block"><path d="M23 3a10.9 10.9 0 0 1-3.14 1.53A4.48 4.48 0 0 0 22.4.36a9.09 9.09 0 0 1-2.88 1.1A4.52 4.52 0 0 0 16.11 0c-2.5 0-4.52 2.02-4.52 4.52 0 .35.04.7.11 1.03C7.69 5.4 4.07 3.7 1.64 1.15c-.38.65-.6 1.4-.6 2.2 0 1.52.77 2.86 1.94 3.65A4.48 4.48 0 0 1 .96 6v.06c0 2.13 1.52 3.91 3.54 4.31-.37.1-.76.16-1.16.16-.28 0-.55-.03-.81-.08.55 1.72 2.16 2.97 4.07 3A9.05 9.05 0 0 1 0 19.54a12.8 12.8 0 0 0 6.92 2.03c8.3 0 12.84-6.88 12.84-12.84 0-.2 0-.39-.01-.58A9.22 9.22 0 0 0 23 3z"/></svg>
+                    @{profile.socialLinks.twitter}
+                  </a>
+                )}
+                {profile?.socialLinks?.website && (
+                  <a
+                    href={profile.socialLinks.website.startsWith('http') ? profile.socialLinks.website : `https://${profile.socialLinks.website}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1 text-[#FFB4A2] hover:text-[#FF7A00] font-bold"
+                  >
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="inline-block"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10A15.3 15.3 0 0 1 12 2z"/></svg>
+                    Website
+                  </a>
+                )}
+              </div>
             </div>
           </div>
         </motion.div>
@@ -205,11 +251,23 @@ export default function ProfilePage() {
             >
               Going To
             </button>
+            <button
+              onClick={() => setActiveTab('settings')}
+              className={`flex-1 py-4 text-lg font-black tracking-tighter transition-colors duration-300 ${
+                activeTab === 'settings'
+                  ? 'bg-[#FF7A00] text-black'
+                  : 'text-[#FFB4A2] hover:text-[#FFD600]'
+              }`}
+            >
+              Settings
+            </button>
           </div>
 
           <div className="p-6">
-            {activeTab === 'liked' ? (
-              profile.liked.length > 0 ? (
+            {activeTab === 'settings' ? (
+              profile && <ProfileSettings profile={profile} onUpdate={handleProfileUpdate} />
+            ) : activeTab === 'liked' ? (
+              profile?.liked.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {profile.liked.map((festival) => (
                     <motion.div
@@ -253,12 +311,12 @@ export default function ProfilePage() {
                   ))}
                 </div>
               ) : (
-                <p className="text-center text-[#FFB4A2] py-8">
+                <div className="text-center text-[#FFB4A2] py-8">
                   No liked festivals yet
-                </p>
+                </div>
               )
             ) : (
-              profile.goingTo.length > 0 ? (
+              profile?.goingTo.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {profile.goingTo.map((festival) => (
                     <motion.div
@@ -302,9 +360,9 @@ export default function ProfilePage() {
                   ))}
                 </div>
               ) : (
-                <p className="text-center text-[#FFB4A2] py-8">
-                  No festivals you're going to yet
-                </p>
+                <div className="text-center text-[#FFB4A2] py-8">
+                  Not going to any festivals yet
+                </div>
               )
             )}
           </div>

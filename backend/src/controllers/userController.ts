@@ -2,7 +2,8 @@ import { Request, Response } from 'express';
 import User from '../models/User';
 import asyncHandler from 'express-async-handler';
 import Festival from '../models/Festival';
-
+import path from 'path';
+import fs from 'fs';
 
 export const getProfile = async (req: any, res: Response) => {
   try {
@@ -19,10 +20,33 @@ export const updateProfile = async (req: any, res: Response) => {
     const user = await User.findById(req.user._id);
     if (!user) return res.status(404).json({ message: 'User not found' });
 
-    const { name, avatar, socialLinks } = req.body;
-    if (name) user.name = name;
-    if (avatar) user.avatar = avatar;
-    if (socialLinks) user.socialLinks = socialLinks;
+    // Handle name update
+    if (req.body.name) {
+      user.name = req.body.name;
+    }
+
+    // Handle social links update
+    if (req.body.socialLinks) {
+      try {
+        const socialLinks = JSON.parse(req.body.socialLinks);
+        user.socialLinks = socialLinks;
+      } catch (err) {
+        return res.status(400).json({ message: 'Invalid social links format' });
+      }
+    }
+
+    // Handle avatar upload
+    if (req.file) {
+      // Delete old avatar if exists
+      if (user.avatar) {
+        const oldAvatarPath = path.join(__dirname, '../../uploads', path.basename(user.avatar));
+        if (fs.existsSync(oldAvatarPath)) {
+          fs.unlinkSync(oldAvatarPath);
+        }
+      }
+      // Update avatar path
+      user.avatar = `uploads/${req.file.filename}`;
+    }
 
     const updated = await user.save();
     res.json(updated);

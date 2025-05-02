@@ -11,6 +11,8 @@ import festivalRoutes from './routes/festivalRoutes';
 import commentRoutes from './routes/commentRoutes';
 import notificationRoutes from './routes/notificationRoutes';
 import adminRoutes from './routes/adminRoutes';
+import mongoose from 'mongoose';
+import path from 'path';
 
 dotenv.config();
 
@@ -41,6 +43,9 @@ console.log('Public directory path:', publicPath);
 // Serve all static files from the public directory
 app.use(express.static(publicPath));
 
+// Serve static files from uploads directory
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+
 app.get('/', (req, res) => {
   res.json({ message: 'Welcome to FestivalSphere API' });
 });
@@ -59,6 +64,11 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
   console.error(err.stack);
   res.status(500).json({ message: 'Something went wrong!' });
 });
+
+// Connect to MongoDB
+mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/festival-sphere')
+  .then(() => console.log('Connected to MongoDB'))
+  .catch((err) => console.error('MongoDB connection error:', err));
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);

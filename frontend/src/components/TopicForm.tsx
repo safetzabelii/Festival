@@ -16,17 +16,18 @@ interface Topic {
   views: number;
   createdAt: string;
   isPinned: boolean;
-  replies?: Topic[];
-  parentComment?: string;
+  comments?: Topic[];
+  parentId?: string;
 }
 
 interface TopicFormProps {
   festivalId: string;
   parentComment?: string;
   onSuccess: (topic: Topic) => void;
+  hideTitle?: boolean;
 }
 
-export default function TopicForm({ festivalId, parentComment, onSuccess }: TopicFormProps) {
+export default function TopicForm({ festivalId, parentComment, onSuccess, hideTitle }: TopicFormProps) {
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [tags, setTags] = useState<string[]>([]);
@@ -36,11 +37,21 @@ export default function TopicForm({ festivalId, parentComment, onSuccess }: Topi
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title.trim() || !content.trim()) return;
+    if ((!parentComment && !title.trim()) || !content.trim()) return;
 
     try {
       const token = localStorage.getItem('token');
       if (!token) throw new Error('Please login to create a topic');
+
+      const requestData = {
+        title: title.trim() || `Re: ${parentComment ? 'Comment' : 'Topic'}`,
+        content,
+        parentComment,
+        tags
+      };
+
+      // Log the request data for debugging
+      console.log('Sending topic data:', requestData);
 
       const response = await fetch(`http://localhost:5000/api/topics/${festivalId}`, {
         method: 'POST',
@@ -48,17 +59,24 @@ export default function TopicForm({ festivalId, parentComment, onSuccess }: Topi
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({
-          title,
-          content,
-          parentComment,
-          tags
-        })
+        body: JSON.stringify(requestData)
       });
 
-      if (!response.ok) throw new Error('Failed to create topic');
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to create topic');
+      }
+      
       const newTopic = await response.json();
-      onSuccess(newTopic);
+      console.log('Received new topic:', newTopic);
+      
+      // Ensure the new topic has proper parentId field
+      const enhancedTopic = {
+        ...newTopic,
+        parentId: parentComment
+      };
+      
+      onSuccess(enhancedTopic);
       setTitle('');
       setContent('');
       setTags([]);
@@ -66,6 +84,7 @@ export default function TopicForm({ festivalId, parentComment, onSuccess }: Topi
       setShowTagInput(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create topic');
+      console.error('Error creating topic:', err);
     }
   };
 
@@ -92,36 +111,51 @@ export default function TopicForm({ festivalId, parentComment, onSuccess }: Topi
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit} className="space-y-4 lowercase">
       {error && (
-        <div className="text-[#FF3366] text-sm">{error}</div>
+        <div className="text-[#FF3366] text-sm">{error.toLowerCase()}</div>
       )}
       
-      <div>
-        <input
-          type="text"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          placeholder="Topic title..."
-          className="w-full bg-black/40 text-[#FFB4A2] border border-[#FF7A00]/20 rounded-lg px-4 py-2 focus:outline-none focus:border-[#FF7A00]"
-        />
-      </div>
+      {!hideTitle && (
+        <div>
+          <input
+            type="text"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="topic title..."
+            className="w-full bg-black/40 text-[#FFB4A2] border border-[#FF7A00]/20 rounded-lg px-4 py-2 focus:outline-none focus:border-[#FF7A00]"
+          />
+        </div>
+      )}
 
       <div className="relative">
         <textarea
           value={content}
           onChange={(e) => setContent(e.target.value)}
-          placeholder="Write your topic content..."
-          className="w-full bg-black/40 text-[#FFB4A2] border border-[#FF7A00]/20 rounded-lg p-4 focus:outline-none focus:border-[#FF7A00] min-h-[200px] resize-none"
-          rows={8}
+          placeholder={parentComment ? "write your comment..." : "write your topic content..."}
+          className={`w-full bg-black/40 text-[#FFB4A2] border border-[#FF7A00]/20 rounded-lg p-3 focus:outline-none focus:border-[#FF7A00] resize-none ${
+            parentComment ? 'min-h-[100px]' : 'min-h-[200px]'
+          }`}
+          rows={parentComment ? 4 : 8}
         />
-        <button
-          type="button"
-          onClick={handleAddTag}
-          className="absolute top-2 right-2 px-3 py-1.5 bg-[#FF7A00]/20 text-[#FF7A00] rounded-full text-sm font-medium hover:bg-[#FF7A00]/30 transition-colors"
-        >
-          Add Tag
-        </button>
+        {!parentComment && (
+          <button
+            type="button"
+            onClick={handleAddTag}
+            className="absolute top-2 right-2 px-3 py-1.5 bg-[#FF7A00]/20 text-[#FF7A00] rounded-full text-sm font-medium hover:bg-[#FF7A00]/30 transition-colors"
+          >
+            add tag
+          </button>
+        )}
+        {parentComment && (
+          <button
+            type="button"
+            onClick={handleAddTag}
+            className="absolute bottom-3 right-3 px-3 py-1 bg-[#FF7A00]/20 text-[#FF7A00] rounded-full text-xs font-medium hover:bg-[#FF7A00]/30 transition-colors"
+          >
+            add tag
+          </button>
+        )}
       </div>
 
       {showTagInput && (
@@ -131,7 +165,7 @@ export default function TopicForm({ festivalId, parentComment, onSuccess }: Topi
             value={tagInput}
             onChange={(e) => setTagInput(e.target.value)}
             onKeyDown={handleTagInputKeyDown}
-            placeholder="Type tag and press Enter"
+            placeholder="type tag and press enter"
             className="w-full bg-black/40 text-[#FFB4A2] border border-[#FF7A00]/20 rounded-lg px-4 py-2 focus:outline-none focus:border-[#FF7A00]"
             autoFocus
           />
@@ -155,7 +189,7 @@ export default function TopicForm({ festivalId, parentComment, onSuccess }: Topi
               key={tag}
               className="px-3 py-1 bg-[#FF7A00]/20 text-[#FF7A00] rounded-full text-sm flex items-center gap-1"
             >
-              {tag}
+              {tag.toLowerCase()}
               <button
                 type="button"
                 onClick={() => removeTag(tag)}
@@ -168,12 +202,18 @@ export default function TopicForm({ festivalId, parentComment, onSuccess }: Topi
         </div>
       )}
 
-      <button
-        type="submit"
-        className="px-6 py-3 bg-[#FF7A00] text-black font-black tracking-tight rounded-lg hover:bg-[#FFD600] transition-all duration-300"
-      >
-        {parentComment ? 'Post Reply' : 'Create Topic'}
-      </button>
+      <div className="flex justify-start">
+        <button
+          type="submit"
+          className={`${
+            parentComment 
+              ? 'px-4 py-2 text-sm' 
+              : 'px-6 py-3'
+          } bg-[#FF7A00] text-black font-bold tracking-tight rounded-lg hover:bg-[#FFD600] transition-all duration-300`}
+        >
+          {parentComment ? 'post comment' : 'create topic'}
+        </button>
+      </div>
     </form>
   );
 } 

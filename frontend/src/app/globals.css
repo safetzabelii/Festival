@@ -55,6 +55,7 @@ body {
   line-height: 1;
   letter-spacing: -0.03em;
   -webkit-font-smoothing: antialiased;
+  text-transform: lowercase; /* Global lowercase for all text */
 }
 
 /* Text and Link Styles */
@@ -69,6 +70,17 @@ h1, h2, h3, h4, h5, h6 {
   text-transform: lowercase;  /* BRAT uses lowercase */
   line-height: 1.2;
   letter-spacing: -0.03em;
+}
+
+/* Input styles - make all placeholders lowercase */
+input::placeholder,
+textarea::placeholder {
+  text-transform: lowercase;
+}
+
+/* Make sure input text is also lowercase */
+input, textarea, select, option {
+  text-transform: lowercase;
 }
 
 /* Form Styles */

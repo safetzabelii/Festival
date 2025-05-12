@@ -42,21 +42,32 @@ export default function CommentForm({ festivalId, parentComment, onComment }: Co
       const token = localStorage.getItem('token');
       if (!token) throw new Error('Please login to comment');
 
+      const requestData = {
+        content,
+        parentComment,
+        tags
+      };
+
+      // Log the request data to debug
+      console.log('Sending comment data:', requestData);
+
       const response = await fetch(`http://localhost:5000/api/comments/${festivalId}`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({
-          content,
-          parentComment,
-          tags
-        })
+        body: JSON.stringify(requestData)
       });
 
-      if (!response.ok) throw new Error('Failed to post comment');
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to post comment');
+      }
+      
       const newComment = await response.json();
+      console.log('Received new comment:', newComment);
+      
       onComment(newComment);
       setContent('');
       setTags([]);
@@ -64,6 +75,7 @@ export default function CommentForm({ festivalId, parentComment, onComment }: Co
       setShowTagInput(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to post comment');
+      console.error('Error posting comment:', err);
     }
   };
 
@@ -90,16 +102,16 @@ export default function CommentForm({ festivalId, parentComment, onComment }: Co
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit} className="space-y-4 lowercase">
       {error && (
-        <div className="text-[#FF3366] text-sm">{error}</div>
+        <div className="text-[#FF3366] text-sm">{error.toLowerCase()}</div>
       )}
       
       <div className="relative">
         <textarea
           value={content}
           onChange={(e) => setContent(e.target.value)}
-          placeholder="Write your comment..."
+          placeholder="write your comment..."
           className="w-full bg-black/40 text-[#FFB4A2] border border-[#FF7A00]/20 rounded-lg p-4 focus:outline-none focus:border-[#FF7A00] min-h-[100px] resize-none"
           rows={4}
         />
@@ -108,7 +120,7 @@ export default function CommentForm({ festivalId, parentComment, onComment }: Co
           onClick={handleAddTag}
           className="absolute top-2 right-2 px-3 py-1.5 bg-[#FF7A00]/20 text-[#FF7A00] rounded-full text-sm font-medium hover:bg-[#FF7A00]/30 transition-colors"
         >
-          Add Tag
+          add tag
         </button>
       </div>
 
@@ -119,7 +131,7 @@ export default function CommentForm({ festivalId, parentComment, onComment }: Co
             value={tagInput}
             onChange={(e) => setTagInput(e.target.value)}
             onKeyDown={handleTagInputKeyDown}
-            placeholder="Type tag and press Enter"
+            placeholder="type tag and press enter"
             className="w-full bg-black/40 text-[#FFB4A2] border border-[#FF7A00]/20 rounded-lg px-4 py-2 focus:outline-none focus:border-[#FF7A00]"
             autoFocus
           />
@@ -143,7 +155,7 @@ export default function CommentForm({ festivalId, parentComment, onComment }: Co
               key={tag}
               className="px-3 py-1 bg-[#FF7A00]/20 text-[#FF7A00] rounded-full text-sm flex items-center gap-1"
             >
-              {tag}
+              {tag.toLowerCase()}
               <button
                 type="button"
                 onClick={() => removeTag(tag)}
@@ -160,7 +172,7 @@ export default function CommentForm({ festivalId, parentComment, onComment }: Co
         type="submit"
         className="px-6 py-3 bg-[#FF7A00] text-black font-black tracking-tight rounded-lg hover:bg-[#FFD600] transition-all duration-300"
       >
-        {parentComment ? 'Reply' : 'Post Comment'}
+        {parentComment ? 'reply' : 'post comment'}
       </button>
     </form>
   );

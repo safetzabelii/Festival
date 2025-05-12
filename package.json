@@ -1,5 +1,8 @@
 {
   "devDependencies": {
     "@types/webpack": "^5.28.5"
+  },
+  "dependencies": {
+    "react-d3-tree": "^3.6.6"
   }
 }

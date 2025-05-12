@@ -1,77 +1,175 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import TopicList from '@/components/TopicList';
 import TopicForm from '@/components/TopicForm';
-import FestivalSelector from '@/components/FestivalSelector';
 import Navbar from '@/components/Navbar';
+import { FaPlus, FaTimes } from 'react-icons/fa';
+
+interface Festival {
+  _id: string;
+  name: string;
+}
 
 export default function Discussions() {
   const [selectedFestival, setSelectedFestival] = useState<string | null>(null);
   const [showTopicForm, setShowTopicForm] = useState(false);
+  const [festivals, setFestivals] = useState<Festival[]>([]);
+  const [loading, setLoading] = useState(true);
+  const formRef = useRef<HTMLDivElement>(null);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+
+  useEffect(() => {
+    const fetchFestivals = async () => {
+      try {
+        const response = await fetch('http://localhost:5000/api/festivals');
+        if (!response.ok) throw new Error('Failed to fetch festivals');
+        const data = await response.json();
+        setFestivals(data);
+      } catch (err) {
+        console.error('Error fetching festivals:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchFestivals();
+  }, []);
+
+  // Handle clicks outside the topic form
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (formRef.current && !formRef.current.contains(event.target as Node)) {
+        setShowTopicForm(false);
+      }
+    };
+
+    if (showTopicForm) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showTopicForm]);
 
   const handleFestivalSelect = (festivalId: string) => {
-    setSelectedFestival(festivalId);
-    setShowTopicForm(false);
+    setSelectedFestival(festivalId === selectedFestival ? null : festivalId);
   };
 
   const handleNewTopic = () => {
-    if (!selectedFestival) {
-      alert('Please select a festival first');
-      return;
-    }
     setShowTopicForm(true);
+  };
+  
+  const handleTopicCreated = () => {
+    // Close the topic form
+    setShowTopicForm(false);
+    
+    // Trigger a refresh of the TopicList component
+    setRefreshTrigger(prev => prev + 1);
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-black via-black to-[#FF7A00]/20">
       <Navbar />
       <div className="fixed inset-0 bg-[#FF7A00]/5 backdrop-blur-3xl pointer-events-none" />
-      <main className="relative z-10 max-w-7xl mx-auto px-4 py-20">
-        <div className="flex justify-between items-center mb-8">
-          <h1 className="text-4xl font-black text-[#FFB4A2]">Festival Discussions</h1>
-          <button
-            onClick={handleNewTopic}
-            className="px-6 py-3 bg-[#FF7A00] text-black font-black tracking-tight rounded-lg hover:bg-[#FFD600] transition-all duration-300"
-          >
-            Start New Topic
-          </button>
-        </div>
-
+      <main className="relative z-10 max-w-7xl mx-auto px-4 pt-24 pb-20 lowercase">
+        {/* Page Header */}
         <div className="mb-8">
-          <FestivalSelector
-            onSelect={handleFestivalSelect}
-            selectedFestival={selectedFestival}
-          />
+          <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
+            <h1 className="text-4xl font-black text-[#FFB4A2]">festival discussions</h1>
+            
+            <button
+              onClick={handleNewTopic}
+              className="px-5 py-2.5 bg-[#FF7A00] text-black font-bold tracking-tight rounded-lg hover:bg-[#FFD600] transition-all duration-300 flex items-center gap-2 self-start"
+            >
+              <FaPlus className="w-3.5 h-3.5" />
+              <span>start new topic</span>
+            </button>
+          </div>
         </div>
 
-        {showTopicForm && selectedFestival && (
+        {/* Festival Filters */}
+        <div className="mb-8 bg-black/30 p-4 rounded-lg border border-[#FF7A00]/10">
+          <h2 className="text-sm font-medium text-[#FFB4A2]/70 mb-3">Filter by festival:</h2>
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => setSelectedFestival(null)}
+              className={`px-4 py-2 rounded-lg transition-all duration-300 ${
+                selectedFestival === null
+                  ? 'bg-[#FF7A00] text-black font-medium'
+                  : 'bg-black/40 text-[#FFB4A2] hover:bg-[#FF7A00]/20'
+              }`}
+            >
+              show all
+            </button>
+            {festivals.map(festival => (
+              <button
+                key={festival._id}
+                onClick={() => handleFestivalSelect(festival._id)}
+                className={`px-4 py-2 rounded-lg transition-all duration-300 ${
+                  selectedFestival === festival._id
+                    ? 'bg-[#FF7A00] text-black font-medium'
+                    : 'bg-black/40 text-[#FFB4A2] hover:bg-[#FF7A00]/20'
+                }`}
+              >
+                {festival.name.toLowerCase()}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* New Topic Form */}
+        {showTopicForm && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
             className="mb-8"
           >
-            <TopicForm
-              festivalId={selectedFestival}
-              onSuccess={() => {
-                setShowTopicForm(false);
-              }}
-            />
+            <div 
+              ref={formRef}
+              className="bg-black/40 backdrop-blur-sm border border-[#FF7A00]/20 rounded-lg p-6 relative"
+            >
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-2xl font-bold text-[#FFB4A2]">create new discussion</h2>
+                <button
+                  onClick={() => setShowTopicForm(false)}
+                  className="text-[#FFB4A2] hover:text-[#FF3366] transition-colors rounded-full w-8 h-8 flex items-center justify-center bg-black/30"
+                >
+                  <FaTimes className="w-4 h-4" />
+                </button>
+              </div>
+              <div className="mb-4">
+                <label className="block text-[#FFB4A2] mb-2">select festival</label>
+                <select
+                  value={selectedFestival || ''}
+                  onChange={(e) => setSelectedFestival(e.target.value)}
+                  className="w-full bg-black/90 text-[#FFB4A2] border border-[#FF7A00] rounded-lg px-4 py-2 focus:outline-none focus:border-[#FFD600]"
+                >
+                  <option value="">select a festival</option>
+                  {festivals.map(festival => (
+                    <option key={festival._id} value={festival._id}>
+                      {festival.name.toLowerCase()}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              {selectedFestival && (
+                <TopicForm
+                  festivalId={selectedFestival}
+                  onSuccess={handleTopicCreated}
+                />
+              )}
+            </div>
           </motion.div>
         )}
 
-        {selectedFestival ? (
-          <TopicList festivalId={selectedFestival} />
-        ) : (
-          <div className="text-center py-12">
-            <h2 className="text-2xl text-[#FFB4A2] mb-4">Select a Festival</h2>
-            <p className="text-[#FFB4A2]/60">
-              Choose a festival to view and participate in its discussions
-            </p>
-          </div>
-        )}
+        {/* Topic List */}
+        <div className="bg-black/30 p-4 sm:p-6 rounded-lg border border-[#FF7A00]/10">
+          <TopicList festivalId={selectedFestival} refreshTrigger={refreshTrigger} />
+        </div>
       </main>
     </div>
   );

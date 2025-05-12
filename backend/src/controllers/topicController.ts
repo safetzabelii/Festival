@@ -7,11 +7,12 @@ export const getTopics = async (req: Request, res: Response) => {
     const { festivalId } = req.params;
     const { sort = 'newest', parentId, search } = req.query;
 
-    let query: any = { festival: festivalId };
+    let query: any = {};
+    if (festivalId) {
+      query.festival = festivalId;
+    }
     if (parentId) {
       query.parentComment = parentId;
-    } else {
-      query.parentComment = { $exists: false };
     }
 
     if (search) {
@@ -35,18 +36,26 @@ export const getTopics = async (req: Request, res: Response) => {
 
     const topics = await Topic.find(query)
       .populate('user', 'name avatar')
+      .populate('festival', 'name')
       .populate({
         path: 'replies',
-        populate: {
-          path: 'user',
-          select: 'name avatar'
-        },
+        populate: [
+          {
+            path: 'user',
+            select: 'name avatar'
+          },
+          {
+            path: 'festival',
+            select: 'name'
+          }
+        ],
         options: { sort: { createdAt: 1 } }
       })
       .sort(sortOption);
 
     res.json(topics);
   } catch (err) {
+    console.error('Error fetching topics:', err);
     res.status(500).json({ message: 'Failed to fetch topics' });
   }
 };
@@ -55,7 +64,8 @@ export const createTopic = async (req: any, res: Response) => {
   const { title, content, parentComment, tags } = req.body;
   const { festivalId } = req.params;
 
-  if (!title || !content) {
+  // Only require title for top-level topics
+  if ((!parentComment && (!title || !content)) || (parentComment && !content)) {
     return res.status(400).json({ message: 'Title and content are required' });
   }
 

@@ -19,12 +19,12 @@ const getTopics = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { festivalId } = req.params;
         const { sort = 'newest', parentId, search } = req.query;
-        let query = { festival: festivalId };
+        let query = {};
+        if (festivalId) {
+            query.festival = festivalId;
+        }
         if (parentId) {
             query.parentComment = parentId;
-        }
-        else {
-            query.parentComment = { $exists: false };
         }
         if (search) {
             query.$text = { $search: search };
@@ -45,18 +45,26 @@ const getTopics = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         }
         const topics = yield Topic_1.default.find(query)
             .populate('user', 'name avatar')
+            .populate('festival', 'name')
             .populate({
             path: 'replies',
-            populate: {
-                path: 'user',
-                select: 'name avatar'
-            },
+            populate: [
+                {
+                    path: 'user',
+                    select: 'name avatar'
+                },
+                {
+                    path: 'festival',
+                    select: 'name'
+                }
+            ],
             options: { sort: { createdAt: 1 } }
         })
             .sort(sortOption);
         res.json(topics);
     }
     catch (err) {
+        console.error('Error fetching topics:', err);
         res.status(500).json({ message: 'Failed to fetch topics' });
     }
 });

@@ -130,6 +130,32 @@ export default function Discussion({ festivalId }: DiscussionProps) {
     });
   }
 
+  // Helper function to check if all children of a comment are deleted
+  function areAllChildrenDeleted(comment: Comment): boolean {
+    const children = comment.replies || [];
+    
+    // If no children, return true
+    if (children.length === 0) {
+      return true;
+    }
+    
+    // Check if all children are deleted and if all their children are deleted
+    return children.every(child => 
+      child.isDeleted && areAllChildrenDeleted(child)
+    );
+  }
+
+  // Helper function to determine if a comment should be rendered
+  function shouldRenderComment(comment: Comment): boolean {
+    // If comment is not deleted, always render it
+    if (!comment.isDeleted) {
+      return true;
+    }
+    
+    // If comment is deleted, only render if it has any non-deleted children
+    return !areAllChildrenDeleted(comment);
+  }
+
   // Helper function to delete from backend
   const deleteFromBackend = async (commentId: string) => {
     try {
@@ -244,10 +270,17 @@ export default function Discussion({ festivalId }: DiscussionProps) {
     tag.toLowerCase().includes(tagInput.toLowerCase()) && !selectedTags.includes(tag)
   );
 
-  const filteredComments = comments.filter(comment => {
-    if (selectedTags.length === 0) return true;
-    return selectedTags.some(tag => comment.tags.includes(tag));
-  });
+  // Filter comments based on tags and deletion status
+  const filteredComments = comments
+    .filter(comment => {
+      // First filter by tags if any are selected
+      if (selectedTags.length > 0 && !selectedTags.some(tag => comment.tags.includes(tag))) {
+        return false;
+      }
+      
+      // Then filter out deleted comments with all deleted children
+      return shouldRenderComment(comment);
+    });
 
   if (loading) return <div className="text-[#FFB4A2]">Loading discussions...</div>;
   if (error) return <div className="text-[#FF3366]">Error: {error}</div>;

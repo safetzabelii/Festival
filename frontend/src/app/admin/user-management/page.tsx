@@ -6,6 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import Navbar from '@/components/Navbar';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import Modal from '../../../components/Modal';
+import AdminProtectedRoute from '@/components/AdminProtectedRoute';
 
 interface User {
   _id: string;
@@ -69,11 +70,8 @@ export default function UserManagementPage() {
     }
     
     if (user && !user.isAdmin) {
-      if (window.history.length > 1) {
-        router.back();
-      } else {
-        router.push('/');
-      }
+      // Use window.location for immediate redirection
+      window.location.href = '/';
       return;
     }
     
@@ -162,15 +160,13 @@ export default function UserManagementPage() {
       }
     });
 
+  // Redirect non-admin users immediately
   if (!user || !user.isAdmin) {
-    return (
-      <div className="min-h-screen bg-black">
-        <Navbar />
-        <div className="max-w-7xl mx-auto px-4 py-20">
-          <div className="text-center text-[#FF3366]">Access Denied: Admin privileges required</div>
-        </div>
-      </div>
-    );
+    if (typeof window !== 'undefined') {
+      window.location.href = '/';
+      return null;
+    }
+    return null;
   }
 
   if (loading) {
@@ -178,181 +174,183 @@ export default function UserManagementPage() {
   }
 
   return (
-    <div className="min-h-screen bg-black">
-      <Navbar />
-      <main className="relative z-10 max-w-7xl mx-auto px-4 py-20">
-        <h1 className="text-4xl font-black tracking-tighter text-white text-center mb-4">
-          User Management
-        </h1>
-        <p className="text-lg text-[#FFB4A2] text-center mb-8 font-black tracking-tight lowercase">
-          manage users
-        </p>
+    <AdminProtectedRoute>
+      <div className="min-h-screen bg-black">
+        <Navbar />
+        <main className="relative z-10 max-w-7xl mx-auto px-4 py-20">
+          <h1 className="text-4xl font-black tracking-tighter text-white text-center mb-4">
+            User Management
+          </h1>
+          <p className="text-lg text-[#FFB4A2] text-center mb-8 font-black tracking-tight lowercase">
+            manage users
+          </p>
 
-        <div className="bg-black/40 backdrop-blur-sm border-2 border-[#FF7A00]/20 rounded-xl p-6 mb-8">
-          <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-6">
-            <div className="flex gap-4">
-              <input
-                type="text"
-                placeholder="Search users..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="px-4 py-2 bg-black/40 border-2 border-[#FF7A00]/20 rounded-lg text-white placeholder-[#FFB4A2] focus:outline-none focus:border-[#FF7A00]"
-              />
-              <select
-                value={filter}
-                onChange={(e) => setFilter(e.target.value as any)}
-                className="px-4 py-2 bg-black/40 border-2 border-[#FF7A00]/20 rounded-lg text-white focus:outline-none focus:border-[#FF7A00]"
-              >
-                <option value="all">All Users</option>
-                <option value="admin">Admins</option>
-                <option value="user">Regular Users</option>
-              </select>
+          <div className="bg-black/40 backdrop-blur-sm border-2 border-[#FF7A00]/20 rounded-xl p-6 mb-8">
+            <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-6">
+              <div className="flex gap-4">
+                <input
+                  type="text"
+                  placeholder="Search users..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="px-4 py-2 bg-black/40 border-2 border-[#FF7A00]/20 rounded-lg text-white placeholder-[#FFB4A2] focus:outline-none focus:border-[#FF7A00]"
+                />
+                <select
+                  value={filter}
+                  onChange={(e) => setFilter(e.target.value as any)}
+                  className="px-4 py-2 bg-black/40 border-2 border-[#FF7A00]/20 rounded-lg text-white focus:outline-none focus:border-[#FF7A00]"
+                >
+                  <option value="all">All Users</option>
+                  <option value="admin">Admins</option>
+                  <option value="user">Regular Users</option>
+                </select>
+              </div>
+              <div className="flex gap-4">
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value as any)}
+                  className="px-4 py-2 bg-black/40 border-2 border-[#FF7A00]/20 rounded-lg text-white focus:outline-none focus:border-[#FF7A00]"
+                >
+                  <option value="createdAt">Sort by Created Date</option>
+                  <option value="name">Sort by Name</option>
+                  <option value="email">Sort by Email</option>
+                </select>
+                <button
+                  onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+                  className="px-4 py-2 bg-[#FF7A00] text-black font-black tracking-tighter rounded-lg hover:bg-[#FF3366] hover:text-white transition-all duration-300"
+                >
+                  {sortOrder === 'asc' ? '↑' : '↓'}
+                </button>
+              </div>
             </div>
-            <div className="flex gap-4">
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as any)}
-                className="px-4 py-2 bg-black/40 border-2 border-[#FF7A00]/20 rounded-lg text-white focus:outline-none focus:border-[#FF7A00]"
-              >
-                <option value="createdAt">Sort by Created Date</option>
-                <option value="name">Sort by Name</option>
-                <option value="email">Sort by Email</option>
-              </select>
+
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b-2 border-[#FF7A00]/20">
+                    <th className="text-left py-4 px-4 text-[#FFB4A2] font-black tracking-tighter">User Info</th>
+                    <th className="text-center py-4 px-4 text-[#FFB4A2] font-black tracking-tighter">Role</th>
+                    <th className="text-center py-4 px-4 text-[#FFB4A2] font-black tracking-tighter">Activity</th>
+                    <th className="text-center py-4 px-4 text-[#FFB4A2] font-black tracking-tighter">Created At</th>
+                    <th className="text-center py-4 px-4 text-[#FFB4A2] font-black tracking-tighter">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredUsers.map(user => (
+                    <tr key={user._id} className="border-b border-[#FF7A00]/20">
+                      <td className="py-4 px-4">
+                        <div className="text-white font-black tracking-tighter">{user.name}</div>
+                        <div className="text-[#FFB4A2] text-sm">{user.email}</div>
+                        {user.socialLinks && (
+                          <div className="flex gap-2 mt-2">
+                            {user.socialLinks.instagram && (
+                              <a href={user.socialLinks.instagram} target="_blank" rel="noopener noreferrer" className="text-[#FFB4A2] hover:text-[#FF7A00]">
+                                <i className="fab fa-instagram"></i>
+                              </a>
+                            )}
+                            {user.socialLinks.twitter && (
+                              <a href={user.socialLinks.twitter} target="_blank" rel="noopener noreferrer" className="text-[#FFB4A2] hover:text-[#FF7A00]">
+                                <i className="fab fa-twitter"></i>
+                              </a>
+                            )}
+                            {user.socialLinks.website && (
+                              <a href={user.socialLinks.website} target="_blank" rel="noopener noreferrer" className="text-[#FFB4A2] hover:text-[#FF7A00]">
+                                <i className="fas fa-globe"></i>
+                              </a>
+                            )}
+                          </div>
+                        )}
+                      </td>
+                      <td className="py-4 px-4 text-center">
+                        <div className="flex flex-col items-center gap-2">
+                          <div className={`inline-block px-3 py-1 rounded-full text-sm font-black tracking-tighter ${
+                            user.isAdmin 
+                              ? 'bg-[#FFD600]/20 text-[#FFD600]' 
+                              : 'bg-[#FF7A00]/20 text-[#FF7A00]'
+                          }`}>
+                            {user.isAdmin ? 'Admin' : 'User'}
+                          </div>
+                          <button
+                            onClick={() => handleToggleAdmin(user._id, user.isAdmin)}
+                            className="text-sm text-[#FFB4A2] hover:text-[#FF7A00] transition-colors"
+                          >
+                            {user.isAdmin ? 'Remove Admin' : 'Make Admin'}
+                          </button>
+                        </div>
+                      </td>
+                      <td className="py-4 px-4 text-center">
+                        <div className="flex flex-col gap-1">
+                          <div className="text-[#FFB4A2] text-sm">
+                            <i className="fas fa-heart mr-1"></i>
+                            {user.liked?.length || 0} Likes
+                          </div>
+                          <div className="text-[#FFB4A2] text-sm">
+                            <i className="fas fa-calendar-check mr-1"></i>
+                            {user.goingTo?.length || 0} Going
+                          </div>
+                          {user.lastLogin && (
+                            <div className="text-[#FFB4A2] text-sm">
+                              <i className="fas fa-clock mr-1"></i>
+                              Last login: {formatDate(user.lastLogin)}
+                            </div>
+                          )}
+                        </div>
+                      </td>
+                      <td className="py-4 px-4 text-center">
+                        <div className="text-[#FFB4A2] text-sm">
+                          {formatDate(user.createdAt)}
+                        </div>
+                      </td>
+                      <td className="py-4 px-4 text-center">
+                        <button
+                          onClick={() => handleDeleteUser(user)}
+                          className="px-4 py-2 rounded-lg font-black tracking-tighter bg-[#FF3366] text-white hover:bg-[#FF3366]/80 transition-all duration-300"
+                        >
+                          Delete
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </main>
+
+        <Modal
+          isOpen={showDeleteModal}
+          onClose={() => {
+            setShowDeleteModal(false);
+            setUserToDelete(null);
+          }}
+        >
+          <div className="p-6">
+            <h3 className="text-lg font-medium text-gray-900 mb-4">
+              Confirm Delete User
+            </h3>
+            <p className="text-sm text-gray-500 mb-6">
+              Are you sure you want to delete the user {userToDelete?.name}? This action cannot be undone.
+            </p>
+            <div className="flex justify-end space-x-4">
               <button
-                onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
-                className="px-4 py-2 bg-[#FF7A00] text-black font-black tracking-tighter rounded-lg hover:bg-[#FF3366] hover:text-white transition-all duration-300"
+                onClick={() => {
+                  setShowDeleteModal(false);
+                  setUserToDelete(null);
+                }}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
               >
-                {sortOrder === 'asc' ? '↑' : '↓'}
+                Cancel
+              </button>
+              <button
+                onClick={confirmDelete}
+                className="px-4 py-2 text-sm font-medium text-white bg-red-600 border border-transparent rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+              >
+                Delete
               </button>
             </div>
           </div>
-
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b-2 border-[#FF7A00]/20">
-                  <th className="text-left py-4 px-4 text-[#FFB4A2] font-black tracking-tighter">User Info</th>
-                  <th className="text-center py-4 px-4 text-[#FFB4A2] font-black tracking-tighter">Role</th>
-                  <th className="text-center py-4 px-4 text-[#FFB4A2] font-black tracking-tighter">Activity</th>
-                  <th className="text-center py-4 px-4 text-[#FFB4A2] font-black tracking-tighter">Created At</th>
-                  <th className="text-center py-4 px-4 text-[#FFB4A2] font-black tracking-tighter">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredUsers.map(user => (
-                  <tr key={user._id} className="border-b border-[#FF7A00]/20">
-                    <td className="py-4 px-4">
-                      <div className="text-white font-black tracking-tighter">{user.name}</div>
-                      <div className="text-[#FFB4A2] text-sm">{user.email}</div>
-                      {user.socialLinks && (
-                        <div className="flex gap-2 mt-2">
-                          {user.socialLinks.instagram && (
-                            <a href={user.socialLinks.instagram} target="_blank" rel="noopener noreferrer" className="text-[#FFB4A2] hover:text-[#FF7A00]">
-                              <i className="fab fa-instagram"></i>
-                            </a>
-                          )}
-                          {user.socialLinks.twitter && (
-                            <a href={user.socialLinks.twitter} target="_blank" rel="noopener noreferrer" className="text-[#FFB4A2] hover:text-[#FF7A00]">
-                              <i className="fab fa-twitter"></i>
-                            </a>
-                          )}
-                          {user.socialLinks.website && (
-                            <a href={user.socialLinks.website} target="_blank" rel="noopener noreferrer" className="text-[#FFB4A2] hover:text-[#FF7A00]">
-                              <i className="fas fa-globe"></i>
-                            </a>
-                          )}
-                        </div>
-                      )}
-                    </td>
-                    <td className="py-4 px-4 text-center">
-                      <div className="flex flex-col items-center gap-2">
-                        <div className={`inline-block px-3 py-1 rounded-full text-sm font-black tracking-tighter ${
-                          user.isAdmin 
-                            ? 'bg-[#FFD600]/20 text-[#FFD600]' 
-                            : 'bg-[#FF7A00]/20 text-[#FF7A00]'
-                        }`}>
-                          {user.isAdmin ? 'Admin' : 'User'}
-                        </div>
-                        <button
-                          onClick={() => handleToggleAdmin(user._id, user.isAdmin)}
-                          className="text-sm text-[#FFB4A2] hover:text-[#FF7A00] transition-colors"
-                        >
-                          {user.isAdmin ? 'Remove Admin' : 'Make Admin'}
-                        </button>
-                      </div>
-                    </td>
-                    <td className="py-4 px-4 text-center">
-                      <div className="flex flex-col gap-1">
-                        <div className="text-[#FFB4A2] text-sm">
-                          <i className="fas fa-heart mr-1"></i>
-                          {user.liked?.length || 0} Likes
-                        </div>
-                        <div className="text-[#FFB4A2] text-sm">
-                          <i className="fas fa-calendar-check mr-1"></i>
-                          {user.goingTo?.length || 0} Going
-                        </div>
-                        {user.lastLogin && (
-                          <div className="text-[#FFB4A2] text-sm">
-                            <i className="fas fa-clock mr-1"></i>
-                            Last login: {formatDate(user.lastLogin)}
-                          </div>
-                        )}
-                      </div>
-                    </td>
-                    <td className="py-4 px-4 text-center">
-                      <div className="text-[#FFB4A2] text-sm">
-                        {formatDate(user.createdAt)}
-                      </div>
-                    </td>
-                    <td className="py-4 px-4 text-center">
-                      <button
-                        onClick={() => handleDeleteUser(user)}
-                        className="px-4 py-2 rounded-lg font-black tracking-tighter bg-[#FF3366] text-white hover:bg-[#FF3366]/80 transition-all duration-300"
-                      >
-                        Delete
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </main>
-
-      <Modal
-        isOpen={showDeleteModal}
-        onClose={() => {
-          setShowDeleteModal(false);
-          setUserToDelete(null);
-        }}
-      >
-        <div className="p-6">
-          <h3 className="text-lg font-medium text-gray-900 mb-4">
-            Confirm Delete User
-          </h3>
-          <p className="text-sm text-gray-500 mb-6">
-            Are you sure you want to delete the user {userToDelete?.name}? This action cannot be undone.
-          </p>
-          <div className="flex justify-end space-x-4">
-            <button
-              onClick={() => {
-                setShowDeleteModal(false);
-                setUserToDelete(null);
-              }}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={confirmDelete}
-              className="px-4 py-2 text-sm font-medium text-white bg-red-600 border border-transparent rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
-            >
-              Delete
-            </button>
-          </div>
-        </div>
-      </Modal>
-    </div>
+        </Modal>
+      </div>
+    </AdminProtectedRoute>
   );
 } 

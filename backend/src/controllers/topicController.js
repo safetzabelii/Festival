@@ -72,7 +72,8 @@ exports.getTopics = getTopics;
 const createTopic = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { title, content, parentComment, tags } = req.body;
     const { festivalId } = req.params;
-    if (!title || !content) {
+    // Only require title for top-level topics
+    if ((!parentComment && (!title || !content)) || (parentComment && !content)) {
         return res.status(400).json({ message: 'Title and content are required' });
     }
     try {

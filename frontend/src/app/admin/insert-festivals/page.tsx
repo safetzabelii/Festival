@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Navbar from '@/components/Navbar';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
@@ -313,12 +313,30 @@ export default function InsertFestivals() {
   const { user } = useAuth() as { user: User | null };
   const router = useRouter();
 
-  const insertFestivals = async () => {
-    if (!user || !user.isAdmin) {
-      setStatus('You must be an admin to perform this action');
+  // Check if user is admin, if not redirect
+  useEffect(() => {
+    if (user === null) {
+      // User is still loading, do nothing
       return;
     }
 
+    if (user && !user.isAdmin) {
+      // Use window.location for immediate redirection
+      window.location.href = '/';
+      return;
+    }
+  }, [user]);
+
+  // Redirect non-admin users immediately
+  if (!user || !user.isAdmin) {
+    if (typeof window !== 'undefined') {
+      window.location.href = '/';
+      return null;
+    }
+    return null;
+  }
+
+  const insertFestivals = async () => {
     setLoading(true);
     setStatus('Starting festival insertion...');
 
@@ -381,24 +399,6 @@ export default function InsertFestivals() {
       setLoading(false);
     }
   };
-
-  if (!user || !user.isAdmin) {
-    return (
-      <div style={{ minHeight: '100vh', backgroundColor: 'var(--background-color)' }}>
-        <Navbar />
-        <div style={{ 
-          maxWidth: '80rem',
-          marginLeft: 'auto',
-          marginRight: 'auto',
-          padding: '3rem 1rem'
-        }}>
-          <div style={{ textAlign: 'center', color: '#dc2626' }}>
-            Access Denied: Admin privileges required
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: 'var(--background-color)' }}>

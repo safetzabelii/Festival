@@ -5,6 +5,8 @@ import { useParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import TopicForm from '@/components/TopicForm';
 import Navbar from '@/components/Navbar';
+import { formatRelativeTime } from '@/utils/dateUtils';
+import { FaTag } from 'react-icons/fa';
 
 interface User {
   _id: string;
@@ -261,73 +263,95 @@ export default function TopicDetail() {
           <div key={reply._id} className="bg-black/40 backdrop-blur-sm border border-[#FF7A00]/20 rounded-lg p-4">
             <div className="flex items-start gap-3">
               {/* User avatar */}
-              <div className="flex-shrink-0">
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#FF7A00] to-[#FFD600] flex items-center justify-center text-black font-bold">
-                  {reply.user?.name?.charAt(0) || 'a'}
-                </div>
+              <div className="w-9 h-9 rounded-full overflow-hidden border-2 border-[#FF7A00]/50">
+                {reply.user?.avatar ? (
+                  <img 
+                    src={reply.user.avatar} 
+                    alt={reply.user.name} 
+                    className="w-full h-full object-cover" 
+                  />
+                ) : (
+                  <div className="w-full h-full bg-gradient-to-br from-[#FF7A00] to-[#FFD600] flex items-center justify-center text-black font-bold text-xs">
+                    {reply.user?.name?.charAt(0) || 'a'}
+                  </div>
+                )}
               </div>
               
               <div className="flex-grow">
-                {/* User info and content */}
-                <div className="flex flex-col">
-                  <div className="flex items-center gap-2 text-sm">
-                    <span className="font-medium text-[#FFD600]">{reply.user?.name || 'anonymous'}</span>
-                    <span className="text-xs text-[#FFB4A2]/60">
-                      {new Date(reply.createdAt).toLocaleDateString()} • {new Date(reply.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                <div className="flex items-center gap-2 text-xs mb-2 justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium text-[#FFD600]">
+                      {reply.user?.name || 'Anonymous'}
                     </span>
+                    <span className="text-[#FFB4A2]/60">{formatRelativeTime(reply.createdAt)}</span>
                   </div>
                   
-                  <p className="text-[#FFB4A2] mt-2 mb-3">{reply.content}</p>
-                  
-                  {/* Action buttons */}
-                  <div className="flex items-center gap-4 text-sm flex-wrap">
-                    <div className="flex items-center bg-black/30 rounded-full overflow-hidden border border-[#FF7A00]/20">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleVote('up', reply._id);
-                        }}
-                        className={`px-2 py-1 transition-colors ${
-                          replyUserVote === 'up' 
-                            ? 'text-[#FFD600] bg-[#FFD600]/20 hover:bg-[#FFD600]/30' 
-                            : 'text-[#FFB4A2] hover:text-[#FFD600] hover:bg-black/40' 
-                        }`}
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
-                          <path d="M12 19V5M12 5l7 7M12 5l-7 7" />
-                        </svg>
-                      </button>
-                      <span className="font-medium text-center px-2">{reply.upvotes - reply.downvotes}</span>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleVote('down', reply._id);
-                        }}
-                        className={`px-2 py-1 transition-colors ${
-                          replyUserVote === 'down' 
-                            ? 'text-[#FF3366] bg-[#FF3366]/20 hover:bg-[#FF3366]/30' 
-                            : 'text-[#FFB4A2] hover:text-[#FF3366] hover:bg-black/40' 
-                        }`}
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
-                          <path d="M12 5v14M12 19l7-7M12 19L5 12" />
-                        </svg>
-                      </button>
+                  {/* Display tags for replies as well */}
+                  {reply.tags && reply.tags.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 justify-end">
+                      {reply.tags.map(tag => (
+                        <span 
+                          key={tag}
+                          className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#FF7A00]/20 text-[#FF7A00]"
+                        >
+                          <FaTag className="mr-1 text-[0.6rem]" />
+                          {tag}
+                        </span>
+                      ))}
                     </div>
-                    
+                  )}
+                </div>
+                
+                <p className="text-[#FFB4A2] mt-2 mb-3">{reply.content}</p>
+                
+                {/* Action buttons */}
+                <div className="flex items-center gap-4 text-sm flex-wrap">
+                  <div className="flex items-center bg-black/30 rounded-full overflow-hidden border border-[#FF7A00]/20">
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        handleReply(reply._id);
+                        handleVote('up', reply._id);
                       }}
-                      className="flex items-center gap-1 text-[#FF7A00] hover:text-[#FFD600] transition-colors bg-black/30 rounded-full px-3 py-1"
+                      className={`px-2 py-1 transition-colors ${
+                        replyUserVote === 'up' 
+                          ? 'text-[#FFD600] bg-[#FFD600]/20 hover:bg-[#FFD600]/30' 
+                          : 'text-[#FFB4A2] hover:text-[#FFD600] hover:bg-black/40' 
+                      }`}
                     >
                       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
-                        <path d="M3 10h10a8 8 0 008-8M3 10l5 5M3 10l5-5" />
+                        <path d="M12 19V5M12 5l7 7M12 5l-7 7" />
                       </svg>
-                      reply
+                    </button>
+                    <span className="font-medium text-center px-2">{reply.upvotes - reply.downvotes}</span>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleVote('down', reply._id);
+                      }}
+                      className={`px-2 py-1 transition-colors ${
+                        replyUserVote === 'down' 
+                          ? 'text-[#FF3366] bg-[#FF3366]/20 hover:bg-[#FF3366]/30' 
+                          : 'text-[#FFB4A2] hover:text-[#FF3366] hover:bg-black/40' 
+                      }`}
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
+                        <path d="M12 5v14M12 19l7-7M12 19L5 12" />
+                      </svg>
                     </button>
                   </div>
+                  
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleReply(reply._id);
+                    }}
+                    className="flex items-center gap-1 text-[#FF7A00] hover:text-[#FFD600] transition-colors bg-black/30 rounded-full px-3 py-1"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
+                      <path d="M3 10h10a8 8 0 008-8M3 10l5 5M3 10l5-5" />
+                    </svg>
+                    reply
+                  </button>
                 </div>
               </div>
             </div>
@@ -379,7 +403,7 @@ export default function TopicDetail() {
                       <div className="flex items-center gap-2 text-sm text-[#FFB4A2]/80">
                         <span className="font-medium text-[#FFD600]">{topic.user?.name || 'anonymous'}</span>
                         <span className="text-xs">•</span>
-                        <span className="text-xs">{new Date(topic.createdAt).toLocaleDateString()}</span>
+                        <span className="text-xs">{formatRelativeTime(topic.createdAt)}</span>
                         <span className="text-xs">•</span>
                         <span className="text-xs">{topic.views} views</span>
                       </div>
@@ -403,9 +427,10 @@ export default function TopicDetail() {
                     {topic.tags.map(tag => (
                       <span
                         key={tag}
-                        className="px-3 py-1 bg-[#FF7A00]/20 text-[#FF7A00] rounded-full text-sm"
+                        className="inline-flex items-center px-3 py-1 bg-[#FF7A00]/20 text-[#FF7A00] rounded-full text-sm font-medium"
                       >
-                        {tag}
+                        <FaTag className="mr-1.5 text-[0.7rem]" />
+                        {tag.toLowerCase()}
                       </span>
                     ))}
                   </div>

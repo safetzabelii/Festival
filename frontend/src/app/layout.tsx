@@ -3,8 +3,7 @@
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from '@/contexts/AuthContext';
-import { Suspense } from 'react';
-import LoadingSpinner from '@/components/LoadingSpinner';
+import Footer from '@/components/Footer';
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -15,11 +14,12 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={inter.className}>
+      <body className={`${inter.className} flex flex-col min-h-screen bg-black`}>
         <AuthProvider>
-          <Suspense fallback={<LoadingSpinner />}>
+          <main className="flex-grow">
             {children}
-          </Suspense>
+          </main>
+          <Footer />
         </AuthProvider>
       </body>
     </html>

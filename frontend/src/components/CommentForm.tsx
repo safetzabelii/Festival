@@ -25,9 +25,10 @@ interface CommentFormProps {
   festivalId: string;
   parentComment?: string;
   onComment: (comment: Comment) => void;
+  onLoginRequired?: (message?: string) => void;
 }
 
-export default function CommentForm({ festivalId, parentComment, onComment }: CommentFormProps) {
+export default function CommentForm({ festivalId, parentComment, onComment, onLoginRequired }: CommentFormProps) {
   const [content, setContent] = useState('');
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState('');
@@ -40,16 +41,20 @@ export default function CommentForm({ festivalId, parentComment, onComment }: Co
 
     try {
       const token = localStorage.getItem('token');
-      if (!token) throw new Error('Please login to comment');
+      if (!token) {
+        if (onLoginRequired) {
+          onLoginRequired('Please login to comment');
+          return;
+        } else {
+          throw new Error('Please login to comment');
+        }
+      }
 
       const requestData = {
         content,
         parentComment,
         tags
       };
-
-      // Log the request data to debug
-      console.log('Sending comment data:', requestData);
 
       const response = await fetch(`http://localhost:5000/api/comments/${festivalId}`, {
         method: 'POST',
@@ -62,11 +67,17 @@ export default function CommentForm({ festivalId, parentComment, onComment }: Co
 
       if (!response.ok) {
         const errorData = await response.json();
+        
+        // Handle authorization errors with login prompt
+        if (response.status === 401 && onLoginRequired) {
+          onLoginRequired('Your session has expired. Please login again to comment.');
+          return;
+        }
+        
         throw new Error(errorData.message || 'Failed to post comment');
       }
       
       const newComment = await response.json();
-      console.log('Received new comment:', newComment);
       
       onComment(newComment);
       setContent('');
@@ -112,7 +123,7 @@ export default function CommentForm({ festivalId, parentComment, onComment }: Co
           value={content}
           onChange={(e) => setContent(e.target.value)}
           placeholder="write your comment..."
-          className="w-full bg-black/40 text-[#FFB4A2] border border-[#FF7A00]/20 rounded-lg p-4 focus:outline-none focus:border-[#FF7A00] min-h-[100px] resize-none"
+          className="w-full bg-black/40 text-[#FFB4A2] border border-[#FF7A00]/20 rounded-lg py-4 px-4 pr-[80px] focus:outline-none focus:border-[#FF7A00] min-h-[100px] resize-none leading-relaxed"
           rows={4}
         />
         <button
@@ -132,7 +143,7 @@ export default function CommentForm({ festivalId, parentComment, onComment }: Co
             onChange={(e) => setTagInput(e.target.value)}
             onKeyDown={handleTagInputKeyDown}
             placeholder="type tag and press enter"
-            className="w-full bg-black/40 text-[#FFB4A2] border border-[#FF7A00]/20 rounded-lg px-4 py-2 focus:outline-none focus:border-[#FF7A00]"
+            className="w-full bg-black/40 text-[#FFB4A2] border border-[#FF7A00]/20 rounded-lg px-4 py-3 focus:outline-none focus:border-[#FF7A00] leading-relaxed"
             autoFocus
           />
           <button

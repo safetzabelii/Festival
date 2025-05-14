@@ -6,6 +6,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import Navbar from '@/components/Navbar';
 import Link from 'next/link';
 import LoadingSpinner from '@/components/LoadingSpinner';
+import { motion } from 'framer-motion';
+import AdminProtectedRoute from '@/components/AdminProtectedRoute';
 
 interface Festival {
   _id: string;
@@ -28,14 +30,12 @@ interface Festival {
 }
 
 interface Stats {
+  totalUsers: number;
   totalFestivals: number;
-  pendingApproval: number;
-  totalLikes: number;
-  totalGoingTo: number;
-  upcomingFestivals: number;
-  pastFestivals: number;
-  mostPopularGenres: { genre: string; count: number }[];
-  mostPopularCities: { city: string; count: number }[];
+  totalTopics: number;
+  pendingFestivals: number;
+  registrationsLast7Days: number;
+  activitiesLast24Hours: number;
 }
 
 export default function AdminDashboard() {
@@ -91,11 +91,8 @@ export default function AdminDashboard() {
     }
     
     if (user && !user.isAdmin) {
-      if (window.history.length > 1) {
-        router.back();
-      } else {
-        router.push('/');
-      }
+      // Use window.location for immediate redirection
+      window.location.href = '/';
       return;
     }
     
@@ -129,15 +126,13 @@ export default function AdminDashboard() {
     }
   };
 
+  // Redirect non-admin users immediately
   if (!user || !user.isAdmin) {
-    return (
-      <div className="min-h-screen bg-black">
-        <Navbar />
-        <div className="max-w-7xl mx-auto px-4 py-20">
-          <div className="text-center text-[#FF3366]">Access Denied: Admin privileges required</div>
-        </div>
-      </div>
-    );
+    if (typeof window !== 'undefined') {
+      window.location.href = '/';
+      return null;
+    }
+    return null;
   }
 
   if (loading) {
@@ -145,165 +140,127 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-black">
-      <Navbar />
-      <main className="relative z-10 max-w-7xl mx-auto px-4 py-20">
-        <h1 className="text-8xl font-black tracking-tighter lowercase text-center mb-4 bg-gradient-to-r from-[#FF7A00] via-[#FFD600] to-[#FF3366] text-transparent bg-clip-text">
-          admin
-        </h1>
-        <p className="text-2xl text-[#FFB4A2] text-center mb-16 font-black tracking-tight lowercase">
-          manage your festival platform
-        </p>
-
-        <div className="flex justify-center gap-4 mb-8">
-          <button
-            onClick={() => setActiveTab('overview')}
-            className={`px-6 py-2 text-lg font-black tracking-tighter transition-colors duration-300 ${
-              activeTab === 'overview'
-                ? 'bg-[#FF7A00] text-black'
-                : 'text-[#FFB4A2] hover:text-[#FFD600]'
-            }`}
-          >
-            Overview
-          </button>
-          <button
-            onClick={() => setActiveTab('festivals')}
-            className={`px-6 py-2 text-lg font-black tracking-tighter transition-colors duration-300 ${
-              activeTab === 'festivals'
-                ? 'bg-[#FF7A00] text-black'
-                : 'text-[#FFB4A2] hover:text-[#FFD600]'
-            }`}
-          >
-            Festivals
-          </button>
-          <button
-            onClick={() => setActiveTab('tools')}
-            className={`px-6 py-2 text-lg font-black tracking-tighter transition-colors duration-300 ${
-              activeTab === 'tools'
-                ? 'bg-[#FF7A00] text-black'
-                : 'text-[#FFB4A2] hover:text-[#FFD600]'
-            }`}
-          >
-            Admin Tools
-          </button>
-        </div>
-
-        {error && (
-          <div className="bg-black/40 backdrop-blur-sm border-2 border-[#FF3366]/20 rounded-xl p-4 mb-8 text-[#FF3366] text-center">
-            {error}
+    <AdminProtectedRoute>
+      <div className="bg-black min-h-screen">
+        <Navbar />
+        <div className="max-w-7xl mx-auto px-4 py-20">
+          <div className="mb-12">
+            <motion.h1 
+              className="text-6xl font-black tracking-tighter mb-4 text-center text-[#FFB4A2] lowercase"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+            >
+              admin dashboard
+            </motion.h1>
+            <motion.p 
+              className="text-center text-[#FF7A00] text-xl lowercase"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.1 }}
+            >
+              manage your festival platform
+            </motion.p>
           </div>
-        )}
-
-        {activeTab === 'overview' && stats && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            <div className="bg-black/40 backdrop-blur-sm border-2 border-[#FF7A00]/20 rounded-xl p-6">
-              <h3 className="text-lg font-black tracking-tighter text-[#FFB4A2] mb-2">Total Festivals</h3>
-              <p className="text-3xl font-black text-[#FF7A00]">{stats.totalFestivals}</p>
+          
+          {loading ? (
+            <div className="text-center py-12">
+              <div className="w-12 h-12 border-4 border-[#FF7A00] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+              <p className="text-[#FFB4A2]">loading statistics...</p>
             </div>
-            <div className="bg-black/40 backdrop-blur-sm border-2 border-[#FF3366]/20 rounded-xl p-6">
-              <h3 className="text-lg font-black tracking-tighter text-[#FFB4A2] mb-2">Pending Approval</h3>
-              <p className="text-3xl font-black text-[#FF3366]">{stats.pendingApproval}</p>
+          ) : error ? (
+            <div className="bg-black/40 backdrop-blur-sm border border-[#FF3366]/30 rounded-lg p-8 text-center">
+              <h2 className="text-2xl font-bold text-[#FF3366] mb-4">Error Loading Dashboard</h2>
+              <p className="text-[#FFB4A2]">{error}</p>
             </div>
-            <div className="bg-black/40 backdrop-blur-sm border-2 border-[#FFD600]/20 rounded-xl p-6">
-              <h3 className="text-lg font-black tracking-tighter text-[#FFB4A2] mb-2">Total Likes</h3>
-              <p className="text-3xl font-black text-[#FFD600]">{stats.totalLikes}</p>
-            </div>
-            <div className="bg-black/40 backdrop-blur-sm border-2 border-[#FF7A00]/20 rounded-xl p-6">
-              <h3 className="text-lg font-black tracking-tighter text-[#FFB4A2] mb-2">Total Going</h3>
-              <p className="text-3xl font-black text-[#FF7A00]">{stats.totalGoingTo}</p>
-            </div>
-          </div>
-        )}
-
-        {activeTab === 'festivals' && (
-          <div className="bg-black/40 backdrop-blur-sm border-2 border-[#FF7A00]/20 rounded-xl p-6">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-black tracking-tighter text-white">All Festivals</h2>
-              <Link
-                href="/create-festival"
-                className="px-6 py-2 bg-[#FF7A00] text-black font-black tracking-tighter rounded-lg hover:bg-[#FF3366] hover:text-white transition-all duration-300"
+          ) : (
+            <>
+              {/* Stats Overview */}
+              <motion.div 
+                className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.2 }}
               >
-                Create New Festival
-              </Link>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {festivals.map(festival => (
-                <div
-                  key={festival._id}
-                  className="bg-black/40 backdrop-blur-sm border-2 border-[#FF7A00]/20 rounded-xl p-6"
-                >
-                  <h3 className="text-xl font-black tracking-tighter text-white mb-2">
-                    {festival.name}
-                  </h3>
-                  <p className="text-[#FFB4A2] mb-2">
-                    {festival.location.city}, {festival.location.country}
-                  </p>
-                  <p className="text-[#FFB4A2] mb-4">
-                    {new Date(festival.startDate).toLocaleDateString()} - {new Date(festival.endDate).toLocaleDateString()}
-                  </p>
-                  <div className="flex items-center gap-6 mb-6">
-                    <div className="flex items-center gap-2 bg-[#FF3366]/10 border border-[#FF3366]/30 rounded-lg px-4 py-2">
-                      <span className="text-2xl text-[#FF3366]">♥</span>
-                      <span className="text-[#FFB4A2] font-black tracking-tighter">{festival.likes || 0}</span>
-                    </div>
-                    <div className="flex items-center gap-2 bg-[#FFD600]/10 border border-[#FFD600]/30 rounded-lg px-4 py-2">
-                      <span className="text-2xl text-[#FFD600]">👤</span>
-                      <span className="text-[#FFB4A2] font-black tracking-tighter">{festival.goingTo || 0}</span>
-                    </div>
-                  </div>
-                  <div className="flex gap-4">
-                    <Link
-                      href={`/festivals/${festival._id}/edit`}
-                      className="flex-1 px-6 py-2 bg-[#FF7A00] text-black font-black tracking-tighter rounded-lg hover:bg-[#FF3366] hover:text-white transition-all duration-300 text-center"
-                    >
-                      Edit
-                    </Link>
-                    <button
-                      onClick={() => handleDelete(festival._id)}
-                      className="flex-1 px-6 py-2 bg-[#FF3366] text-black font-black tracking-tighter rounded-lg hover:bg-[#FF7A00] hover:text-white transition-all duration-300"
-                    >
-                      Delete
-                    </button>
-                  </div>
+                <div className="bg-black/40 backdrop-blur-sm border border-[#FF7A00]/30 rounded-lg p-6">
+                  <h3 className="text-sm uppercase tracking-wider text-[#FFB4A2]/60 mb-2">Total Users</h3>
+                  <p className="text-4xl font-black text-[#FF7A00]">{stats?.totalUsers || 0}</p>
                 </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {activeTab === 'tools' && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <Link
-              href="/admin/pending-festivals"
-              className="bg-black/40 backdrop-blur-sm border-2 border-[#FF7A00]/20 rounded-xl p-6 hover:border-[#FF3366]/20 transition-colors duration-300"
-            >
-              <h3 className="text-xl font-black tracking-tighter text-white mb-2">Pending Festivals</h3>
-              <p className="text-[#FFB4A2]">Review and approve festivals created by non-admin users</p>
-            </Link>
-            <Link
-              href="/admin/export-data"
-              className="bg-black/40 backdrop-blur-sm border-2 border-[#FF7A00]/20 rounded-xl p-6 hover:border-[#FF3366]/20 transition-colors duration-300"
-            >
-              <h3 className="text-xl font-black tracking-tighter text-white mb-2">Export Data</h3>
-              <p className="text-[#FFB4A2]">Download festival and user data</p>
-            </Link>
-            <Link
-              href="/admin/analytics"
-              className="bg-black/40 backdrop-blur-sm border-2 border-[#FF7A00]/20 rounded-xl p-6 hover:border-[#FF3366]/20 transition-colors duration-300"
-            >
-              <h3 className="text-xl font-black tracking-tighter text-white mb-2">Analytics</h3>
-              <p className="text-[#FFB4A2]">View detailed festival statistics and trends</p>
-            </Link>
-            <Link
-              href="/admin/user-management"
-              className="bg-black/40 backdrop-blur-sm border-2 border-[#FF7A00]/20 rounded-xl p-6 hover:border-[#FF3366]/20 transition-colors duration-300"
-            >
-              <h3 className="text-xl font-black tracking-tighter text-white mb-2">User Management</h3>
-              <p className="text-[#FFB4A2]">Manage user roles and permissions</p>
-            </Link>
-          </div>
-        )}
-      </main>
-    </div>
+                <div className="bg-black/40 backdrop-blur-sm border border-[#FF7A00]/30 rounded-lg p-6">
+                  <h3 className="text-sm uppercase tracking-wider text-[#FFB4A2]/60 mb-2">Total Festivals</h3>
+                  <p className="text-4xl font-black text-[#FFD600]">{stats?.totalFestivals || 0}</p>
+                </div>
+                <div className="bg-black/40 backdrop-blur-sm border border-[#FF7A00]/30 rounded-lg p-6">
+                  <h3 className="text-sm uppercase tracking-wider text-[#FFB4A2]/60 mb-2">Topics & Comments</h3>
+                  <p className="text-4xl font-black text-[#FF3366]">{stats?.totalTopics || 0}</p>
+                </div>
+              </motion.div>
+              
+              <motion.div 
+                className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.3 }}
+              >
+                <div className="bg-black/40 backdrop-blur-sm border border-[#FF7A00]/30 rounded-lg p-6">
+                  <h3 className="text-sm uppercase tracking-wider text-[#FFB4A2]/60 mb-2">Pending Approvals</h3>
+                  <p className="text-4xl font-black text-[#FF7A00]">{stats?.pendingFestivals || 0}</p>
+                </div>
+                <div className="bg-black/40 backdrop-blur-sm border border-[#FF7A00]/30 rounded-lg p-6">
+                  <h3 className="text-sm uppercase tracking-wider text-[#FFB4A2]/60 mb-2">Recent Signups (7 days)</h3>
+                  <p className="text-4xl font-black text-[#FFD600]">{stats?.registrationsLast7Days || 0}</p>
+                </div>
+              </motion.div>
+              
+              {/* Admin Tools */}
+              <motion.h2 
+                className="text-3xl font-black tracking-tighter mb-6 text-[#FFB4A2]"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.4 }}
+              >
+                Admin Tools
+              </motion.h2>
+              
+              <motion.div 
+                className="grid grid-cols-1 md:grid-cols-2 gap-6"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.5 }}
+              >
+                <Link 
+                  href="/admin/pending-festivals"
+                  className="bg-black/40 backdrop-blur-sm border border-[#FF7A00]/30 rounded-lg p-6 hover:border-[#FF7A00] transition-all duration-300"
+                >
+                  <h3 className="text-xl font-bold text-[#FF7A00] mb-2">Festival Approvals</h3>
+                  <p className="text-[#FFB4A2]">Review and approve festivals created by non-admin users</p>
+                </Link>
+                <Link 
+                  href="/admin/export-data"
+                  className="bg-black/40 backdrop-blur-sm border border-[#FF7A00]/30 rounded-lg p-6 hover:border-[#FF7A00] transition-all duration-300"
+                >
+                  <h3 className="text-xl font-bold text-[#FF7A00] mb-2">Export Data</h3>
+                  <p className="text-[#FFB4A2]">Export user, festival, and discussion data</p>
+                </Link>
+                <Link 
+                  href="/admin/analytics"
+                  className="bg-black/40 backdrop-blur-sm border border-[#FF7A00]/30 rounded-lg p-6 hover:border-[#FF7A00] transition-all duration-300"
+                >
+                  <h3 className="text-xl font-bold text-[#FF7A00] mb-2">Analytics</h3>
+                  <p className="text-[#FFB4A2]">View detailed platform analytics and statistics</p>
+                </Link>
+                <Link 
+                  href="/admin/user-management"
+                  className="bg-black/40 backdrop-blur-sm border border-[#FF7A00]/30 rounded-lg p-6 hover:border-[#FF7A00] transition-all duration-300"
+                >
+                  <h3 className="text-xl font-bold text-[#FF7A00] mb-2">User Management</h3>
+                  <p className="text-[#FFB4A2]">Manage users, roles, and permissions</p>
+                </Link>
+              </motion.div>
+            </>
+          )}
+        </div>
+      </div>
+    </AdminProtectedRoute>
   );
 } 

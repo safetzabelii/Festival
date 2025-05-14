@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Navbar from '@/components/Navbar';
 import { useAuth } from '@/contexts/AuthContext';
@@ -11,6 +11,29 @@ export default function ExportDataPage() {
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Check if user is admin, if not redirect
+  useEffect(() => {
+    if (user === null) {
+      // User is still loading, do nothing
+      return;
+    }
+
+    if (user && !user.isAdmin) {
+      // Use window.location for immediate redirection
+      window.location.href = '/';
+      return;
+    }
+  }, [user]);
+
+  // Redirect non-admin users immediately
+  if (!user || !user.isAdmin) {
+    if (typeof window !== 'undefined') {
+      window.location.href = '/';
+      return null;
+    }
+    return null;
+  }
 
   const handleExport = async (type: 'festivals' | 'users') => {
     try {
@@ -54,17 +77,6 @@ export default function ExportDataPage() {
       setLoading(false);
     }
   };
-
-  if (!user || !user.isAdmin) {
-    return (
-      <div className="min-h-screen bg-black">
-        <Navbar />
-        <div className="max-w-7xl mx-auto px-4 py-20">
-          <div className="text-center text-[#FF3366]">Access Denied: Admin privileges required</div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-black">

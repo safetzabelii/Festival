@@ -61,6 +61,18 @@ export default function AnalyticsPage() {
   const [retryCount, setRetryCount] = useState(0);
 
   useEffect(() => {
+    // Check if user is not an admin and redirect
+    if (user === null) {
+      // User is still loading, do nothing
+      return;
+    }
+
+    if (user && !user.isAdmin) {
+      // Use window.location for immediate redirection
+      window.location.href = '/';
+      return;
+    }
+
     const fetchAnalytics = async () => {
       try {
         const token = localStorage.getItem('token');
@@ -112,7 +124,7 @@ export default function AnalyticsPage() {
     };
 
     fetchAnalytics();
-  }, [retryCount, router]);
+  }, [retryCount, router, user]);
 
   // Helper function to validate analytics data structure
   const isValidAnalyticsData = (data: any): data is AnalyticsData => {
@@ -136,15 +148,13 @@ export default function AnalyticsPage() {
     );
   };
 
+  // Redirect non-admin users immediately
   if (!user || !user.isAdmin) {
-    return (
-      <div className="min-h-screen bg-black">
-        <Navbar />
-        <div className="max-w-7xl mx-auto px-4 py-20">
-          <div className="text-center text-[#FF3366]">Access Denied: Admin privileges required</div>
-        </div>
-      </div>
-    );
+    if (typeof window !== 'undefined') {
+      window.location.href = '/';
+      return null;
+    }
+    return null;
   }
 
   if (loading) {

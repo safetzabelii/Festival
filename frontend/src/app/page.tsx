@@ -40,8 +40,35 @@ export default function Home() {
     router.push(path);
   };
 
+  // Get the destination for create card based on user type
+  const getCreateDestination = () => {
+    if (!user) return '/discussions';
+    if (user.isAdmin) return '/create-festival';
+    return '/discussions';
+  };
+
+  // Get the text for create card based on user type
+  const getCreateButtonText = () => {
+    if (!user) return 'browse';
+    if (user.isAdmin) return 'start';
+    return 'join';
+  };
+
+  // Get the description for create card based on user type
+  const getCreateDescription = () => {
+    if (!user || !user.isAdmin) return 'join festival discussions';
+    return 'share your festival with the world';
+  };
+
+  // Get the title for the card based on user type
+  const getCardTitle = () => {
+    if (!user || !user.isAdmin) return 'discuss';
+    return 'create';
+  };
+
   return (
-    <div className="min-h-screen bg-black text-white">
+    <div className="bg-black text-white">
+      <div className="fixed inset-0 -z-10 bg-[#FF7A00]/5 backdrop-blur-xl" />
       <Navbar />
       <main className="min-h-[calc(100vh-4rem)] flex flex-col items-center justify-center relative overflow-hidden">
         {/* Background noise effect */}
@@ -165,23 +192,25 @@ export default function Home() {
               </div>
             </motion.div>
 
-            {/* Create Card */}
+            {/* Create or Discuss Card */}
             <motion.div 
               className="group relative"
               variants={fadeIn}
             >
               <div className="absolute inset-0 bg-gradient-to-br from-[#FF3366] to-[#FF7A00] opacity-0 group-hover:opacity-100 mix-blend-overlay transition-all duration-500" />
               <div className="border-2 border-[#FF3366]/30 bg-black/50 backdrop-blur-sm p-8 h-full transform group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform duration-300">
-                <h2 className="text-4xl font-black mb-4 lowercase tracking-tighter text-[#FF3366]">create</h2>
-                <p className="text-[#FFB4A2] mb-8 lowercase tracking-tight text-lg">share your festival with the world</p>
+                <h2 className="text-4xl font-black mb-4 lowercase tracking-tighter text-[#FF3366]">
+                  {getCardTitle()}
+                </h2>
+                <p className="text-[#FFB4A2] mb-8 lowercase tracking-tight text-lg">{getCreateDescription()}</p>
                 <button 
-                  onClick={() => handleNavigation('/create-festival', 'create')}
+                  onClick={() => handleNavigation(getCreateDestination(), 'create')}
                   disabled={loadingStates.create}
                   className="inline-block border-[3px] border-[#FF3366] text-[#FF3366] px-8 py-3 hover:bg-[#FF3366] hover:text-black transition-all duration-300 lowercase tracking-tight text-xl font-black disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {loadingStates.create ? (
                     <div className="w-6 h-6 border-2 border-[#FF3366] border-t-transparent rounded-full animate-spin mx-auto" />
-                  ) : 'start'}
+                  ) : getCreateButtonText()}
                 </button>
               </div>
             </motion.div>

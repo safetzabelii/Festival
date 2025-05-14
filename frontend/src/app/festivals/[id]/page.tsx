@@ -1,10 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useParams } from 'next/navigation';
+import { useState, useEffect, useRef } from 'react';
+import { useParams, useRouter } from 'next/navigation';
 import Navbar from '@/components/Navbar';
 import { motion } from 'framer-motion';
 import Discussion from '@/components/Discussion';
+import { FaTimes, FaSignInAlt } from 'react-icons/fa';
+import { createPortal } from 'react-dom';
 
 interface Location {
   city: string;
@@ -34,12 +36,16 @@ interface Festival {
 
 export default function FestivalDetailsPage() {
   const params = useParams();
+  const router = useRouter();
   const [festival, setFestival] = useState<Festival | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isLiked, setIsLiked] = useState(false);
   const [isGoing, setIsGoing] = useState(false);
   const [isActionLoading, setIsActionLoading] = useState(false);
+  const [showLoginPrompt, setShowLoginPrompt] = useState(false);
+  const [loginPromptMessage, setLoginPromptMessage] = useState('');
+  const loginPromptRef = useRef<HTMLDivElement>(null);
 
   const formatLocation = (loc: Location | undefined) => {
     if (!loc) return 'Location not specified';
@@ -64,10 +70,13 @@ export default function FestivalDetailsPage() {
     try {
       const token = localStorage.getItem('token');
       if (!token) {
-        throw new Error('Please login to perform this action');
+        setLoginPromptMessage('You need to be logged in to interact with festivals.');
+        setShowLoginPrompt(true);
+        setIsActionLoading(false);
+        return;
       }
 
-      const response = await fetch(`http://localhost:5000/api/users/${type}/${festival._id}`, {
+      const response = await fetch(`http://localhost:5000/api/users/me/${type === 'like' ? 'liked' : 'going'}/${festival._id}`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -76,7 +85,14 @@ export default function FestivalDetailsPage() {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to perform action');
+        const errorData = await response.json().catch(() => ({}));
+        
+        if (response.status === 401) {
+          setLoginPromptMessage('Your session has expired. Please login again.');
+          setShowLoginPrompt(true);
+          return;
+        }
+        throw new Error(errorData.message || 'Failed to perform action');
       }
 
       const data = await response.json();
@@ -103,8 +119,26 @@ export default function FestivalDetailsPage() {
   };
 
   useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (loginPromptRef.current && !loginPromptRef.current.contains(event.target as Node)) {
+        setShowLoginPrompt(false);
+      }
+    };
+
+    if (showLoginPrompt) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showLoginPrompt]);
+
+  useEffect(() => {
     const fetchFestival = async () => {
       try {
+        if (!params || !params.id) return;
+        
         const response = await fetch(`http://localhost:5000/api/festivals/${params.id}`);
         if (!response.ok) {
           throw new Error('Failed to fetch festival');
@@ -119,6 +153,8 @@ export default function FestivalDetailsPage() {
     };
 
     const fetchUserData = async () => {
+      if (!params || !params.id) return;
+      
       const token = localStorage.getItem('token');
       if (!token) return;
 
@@ -152,7 +188,11 @@ export default function FestivalDetailsPage() {
 
     fetchFestival();
     fetchUserData();
-  }, [params.id]);
+  }, [params]);
+
+  const handleLogin = () => {
+    router.push('/login');
+  };
 
   if (loading) {
     return (
@@ -189,6 +229,43 @@ export default function FestivalDetailsPage() {
       <Navbar />
       
       <div className="fixed inset-0 bg-[#FF7A00]/5 backdrop-blur-3xl pointer-events-none" />
+
+      {/* Login Prompt Modal */}
+      {showLoginPrompt && createPortal(
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center px-4"
+        >
+          <motion.div 
+            ref={loginPromptRef}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-black/90 border border-[#FF7A00]/40 rounded-xl p-6 max-w-md w-full"
+          >
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-2xl font-bold text-[#FFB4A2]">login required</h2>
+              <button
+                onClick={() => setShowLoginPrompt(false)}
+                className="text-[#FFB4A2] hover:text-[#FF3366] transition-colors rounded-full w-8 h-8 flex items-center justify-center bg-black/30"
+              >
+                <FaTimes className="w-4 h-4" />
+              </button>
+            </div>
+            <p className="text-[#FFB4A2] mb-6">
+              {loginPromptMessage || 'You need to be logged in to interact with festivals.'}
+            </p>
+            <button
+              onClick={handleLogin}
+              className="px-6 py-3 bg-[#FF7A00] text-black font-bold tracking-tight rounded-lg hover:bg-[#FFD600] transition-all duration-300 flex items-center gap-2 w-full justify-center"
+            >
+              <FaSignInAlt className="w-4 h-4" />
+              <span>login now</span>
+            </button>
+          </motion.div>
+        </motion.div>,
+        document.body
+      )}
 
       <main className="relative z-10 max-w-7xl mx-auto px-4 py-20">
         <motion.div

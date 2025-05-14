@@ -18,6 +18,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadingNav, setLoadingNav] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
 
@@ -68,7 +69,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const login = async (email: string, password: string) => {
-    setLoading(true);
+    setLoadingNav(true);
     try {
       const response = await fetch('http://localhost:5000/api/auth/login', {
         method: 'POST',
@@ -93,12 +94,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       throw error;
     } finally {
-      setLoading(false);
+      setLoadingNav(false);
     }
   };
 
   const register = async (name: string, email: string, password: string) => {
-    setLoading(true);
+    setLoadingNav(true);
     try {
       const response = await fetch('http://localhost:5000/api/auth/register', {
         method: 'POST',
@@ -123,40 +124,49 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       throw error;
     } finally {
-      setLoading(false);
+      setLoadingNav(false);
     }
   };
 
   const logout = async () => {
-    setLoading(true);
+    setLoadingNav(true);
     try {
-      await new Promise(resolve => setTimeout(resolve, 500));
       localStorage.removeItem('token');
       localStorage.removeItem('userId');
       setUser(null);
       router.push('/');
       router.refresh();
     } finally {
-      setLoading(false);
+      setLoadingNav(false);
     }
   };
 
   return (
     <AuthContext.Provider value={{ user, loading, login, register, logout }}>
-      {loading && (
+      {loading && !loadingNav && (
         <div style={{ 
           position: 'fixed',
           top: 0,
           left: 0,
           width: '100%',
           height: '100%',
-          backgroundColor: 'rgba(255, 255, 255, 0.8)',
+          backgroundColor: 'rgba(0, 0, 0, 0.7)',
           display: 'flex',
           justifyContent: 'center',
           alignItems: 'center',
-          zIndex: 9999
+          zIndex: 9999,
+          backdropFilter: 'blur(4px)',
+          opacity: 0,
+          animation: 'fadeIn 0.3s forwards',
+          animationDelay: '0.3s'
         }}>
           <LoadingSpinner />
+          <style jsx>{`
+            @keyframes fadeIn {
+              from { opacity: 0; }
+              to { opacity: 1; }
+            }
+          `}</style>
         </div>
       )}
       {children}

@@ -3,6 +3,9 @@ import { createPortal } from 'react-dom';
 import { motion } from 'framer-motion';
 import Comment from './Comment';
 import CommentForm from './CommentForm';
+import { formatRelativeTime } from '../utils/dateUtils';
+import { FaTag, FaTimes, FaSignInAlt } from 'react-icons/fa';
+import { useRouter } from 'next/navigation';
 
 interface DiscussionProps {
   festivalId: string;
@@ -32,6 +35,7 @@ interface Comment {
 }
 
 export default function Discussion({ festivalId }: DiscussionProps) {
+  const router = useRouter();
   const [comments, setComments] = useState<Comment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -41,8 +45,11 @@ export default function Discussion({ festivalId }: DiscussionProps) {
   const [tagInput, setTagInput] = useState('');
   const [showTagDropdown, setShowTagDropdown] = useState(false);
   const [dropdownPos, setDropdownPos] = useState<{left: number, top: number, width: number} | null>(null);
+  const [showLoginPrompt, setShowLoginPrompt] = useState(false);
+  const [loginPromptMessage, setLoginPromptMessage] = useState('');
   const tagInputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const loginPromptRef = useRef<HTMLDivElement>(null);
 
   const fetchComments = async () => {
     try {
@@ -97,6 +104,23 @@ export default function Discussion({ festivalId }: DiscussionProps) {
       window.removeEventListener('resize', updateDropdownPos);
     };
   }, [showTagDropdown]);
+
+  // Add a new useEffect for login prompt click outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (loginPromptRef.current && !loginPromptRef.current.contains(event.target as Node)) {
+        setShowLoginPrompt(false);
+      }
+    };
+
+    if (showLoginPrompt) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showLoginPrompt]);
 
   // Recursively update a comment in the tree
   function updateCommentTree(comments: Comment[], updatedId: string, updates: Partial<Comment>): Comment[] {
@@ -282,11 +306,59 @@ export default function Discussion({ festivalId }: DiscussionProps) {
       return shouldRenderComment(comment);
     });
 
+  // Add login handler
+  const handleLogin = () => {
+    router.push('/login');
+  };
+
+  // Add a function to show login prompt
+  const handleShowLoginPrompt = (message: string = 'You need to be logged in to interact with discussions.') => {
+    setLoginPromptMessage(message);
+    setShowLoginPrompt(true);
+  };
+
   if (loading) return <div className="text-[#FFB4A2]">Loading discussions...</div>;
   if (error) return <div className="text-[#FF3366]">Error: {error}</div>;
 
   return (
     <div className="space-y-8">
+      {/* Login Prompt Modal */}
+      {showLoginPrompt && createPortal(
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center px-4"
+        >
+          <motion.div 
+            ref={loginPromptRef}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-black/90 border border-[#FF7A00]/40 rounded-xl p-6 max-w-md w-full"
+          >
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-2xl font-bold text-[#FFB4A2]">login required</h2>
+              <button
+                onClick={() => setShowLoginPrompt(false)}
+                className="text-[#FFB4A2] hover:text-[#FF3366] transition-colors rounded-full w-8 h-8 flex items-center justify-center bg-black/30"
+              >
+                <FaTimes className="w-4 h-4" />
+              </button>
+            </div>
+            <p className="text-[#FFB4A2] mb-6">
+              {loginPromptMessage || 'You need to be logged in to interact with discussions.'}
+            </p>
+            <button
+              onClick={handleLogin}
+              className="px-6 py-3 bg-[#FF7A00] text-black font-bold tracking-tight rounded-lg hover:bg-[#FFD600] transition-all duration-300 flex items-center gap-2 w-full justify-center"
+            >
+              <FaSignInAlt className="w-4 h-4" />
+              <span>login now</span>
+            </button>
+          </motion.div>
+        </motion.div>,
+        document.body
+      )}
+
       <div className="flex flex-col gap-4">
         <h2 className="text-3xl font-black tracking-tighter text-[#FFB4A2]">Discussions</h2>
 
@@ -325,7 +397,7 @@ export default function Discussion({ festivalId }: DiscussionProps) {
                   {showTagDropdown && filteredTags.length > 0 && dropdownPos && createPortal(
                     <div
                       ref={dropdownRef}
-                      className="fixed z-[9999] bg-black/90 backdrop-blur-sm rounded-lg shadow-2xl"
+                      className="fixed z-[9999] bg-black/90 backdrop-blur-sm rounded-lg shadow-2xl overflow-y-auto max-h-[200px]"
                       style={{
                         left: dropdownPos.left,
                         top: dropdownPos.top,
@@ -337,8 +409,9 @@ export default function Discussion({ festivalId }: DiscussionProps) {
                         <button
                           key={tag}
                           onClick={() => addTag(tag)}
-                          className="w-full px-4 py-2 text-left text-[#FFB4A2] hover:bg-[#FF7A00]/20 transition-colors border-0"
+                          className="w-full px-4 py-2 text-left text-[#FFB4A2] hover:bg-[#FF7A00]/20 transition-colors border-0 flex items-center"
                         >
+                          <FaTag className="mr-2 text-[#FF7A00]" />
                           {tag}
                         </button>
                       ))}
@@ -353,10 +426,11 @@ export default function Discussion({ festivalId }: DiscussionProps) {
                       key={tag}
                       className="px-3 py-1 bg-[#FF7A00] text-black rounded-full text-sm font-medium flex items-center gap-1"
                     >
+                      <FaTag className="mr-1" />
                       {tag}
                       <button
                         onClick={() => removeTag(tag)}
-                        className="hover:text-[#FF3366] transition-colors"
+                        className="hover:text-[#FF3366] transition-colors ml-1"
                       >
                         ×
                       </button>
@@ -369,7 +443,11 @@ export default function Discussion({ festivalId }: DiscussionProps) {
         </div>
 
         <div className="bg-black/40 backdrop-blur-sm border border-[#FF7A00]/20 rounded-lg p-6">
-          <CommentForm festivalId={festivalId} onComment={handleNewComment} />
+          <CommentForm 
+            festivalId={festivalId} 
+            onComment={handleNewComment}
+            onLoginRequired={handleShowLoginPrompt}
+          />
         </div>
       </div>
 
@@ -387,6 +465,7 @@ export default function Discussion({ festivalId }: DiscussionProps) {
               onReply={handleNewComment}
               onEdit={fetchComments}
               onDelete={handleDelete}
+              onLoginRequired={handleShowLoginPrompt}
             />
           </motion.div>
         ))}

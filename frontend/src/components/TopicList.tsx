@@ -1,7 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import TopicForm from './TopicForm';
-import { FaArrowUp, FaArrowDown, FaReply, FaComment, FaEye, FaThumbtack, FaTrash } from 'react-icons/fa';
+import { FaArrowUp, FaArrowDown, FaReply, FaComment, FaEye, FaThumbtack, FaTrash, FaTag, FaTimes, FaPlus, FaSort, FaSignInAlt } from 'react-icons/fa';
+import { formatRelativeTime } from '../utils/dateUtils';
+import { useRouter } from 'next/navigation';
 
 interface TopicListProps {
   festivalId: string | null;
@@ -40,6 +42,7 @@ interface Topic {
 }
 
 export default function TopicList({ festivalId, refreshTrigger = 0 }: TopicListProps) {
+  const router = useRouter();
   const [topics, setTopics] = useState<Topic[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -51,6 +54,37 @@ export default function TopicList({ festivalId, refreshTrigger = 0 }: TopicListP
 
   // Track which comments have reply form open
   const [activeReplyForms, setActiveReplyForms] = useState<{ [key: string]: boolean }>({});
+
+  // Tag filtering state
+  const [tagFilter, setTagFilter] = useState<string>('');
+  const [availableTags, setAvailableTags] = useState<string[]>([]);
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const tagInputRef = useRef<HTMLInputElement>(null);
+
+  // Initialize state for login status and userId to prevent server-side rendering issues
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [viewedTopicsStorage, setViewedTopicsStorage] = useState<string[]>([]);
+  const [showLoginPrompt, setShowLoginPrompt] = useState(false);
+  const [loginPromptMessage, setLoginPromptMessage] = useState('');
+  const loginPromptRef = useRef<HTMLDivElement>(null);
+  
+  // Safe localStorage access after component mounts (client-side only)
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setIsLoggedIn(!!localStorage.getItem('token'));
+      setUserId(localStorage.getItem('userId'));
+      setCurrentUserId(localStorage.getItem('userId'));
+      try {
+        const storedViewedTopics = localStorage.getItem('viewedTopics');
+        if (storedViewedTopics) {
+          setViewedTopicsStorage(JSON.parse(storedViewedTopics));
+        }
+      } catch (e) {
+        console.error('Error parsing viewed topics:', e);
+      }
+    }
+  }, []);
 
   const fetchTopics = async () => {
     try {
@@ -128,8 +162,26 @@ export default function TopicList({ festivalId, refreshTrigger = 0 }: TopicListP
       // Process all top-level topics and populate their children recursively
       const processedTopics = topLevelTopics.map(populateChildren);
       
-      // Log the processed structure for debugging
-      console.log('Processed topics structure:', processedTopics);
+      // After processing topics, extract all unique tags
+      const allTags = new Set<string>();
+      const extractTags = (topicsList: Topic[]) => {
+        topicsList.forEach(topic => {
+          // Add tags from this topic
+          topic.tags?.forEach(tag => allTags.add(tag));
+          
+          // Process nested comments/replies recursively
+          const children = topic.comments || topic.replies || [];
+          if (children.length > 0) {
+            extractTags(children);
+          }
+        });
+      };
+      
+      // Extract tags from processed topics
+      extractTags(processedTopics);
+      
+      // Update available tags
+      setAvailableTags(Array.from(allTags).sort());
       
       setTopics(processedTopics);
     } catch (err) {
@@ -155,23 +207,61 @@ export default function TopicList({ festivalId, refreshTrigger = 0 }: TopicListP
 
   useEffect(() => {
     // Get current user ID from localStorage
-    const token = localStorage.getItem('token');
-    if (token) {
-      try {
-        const payload = JSON.parse(atob(token.split('.')[1]));
-        setCurrentUserId(payload.id);
-      } catch (e) {
-        console.error('Error parsing token:', e);
+    if (typeof window !== 'undefined') {
+      const token = localStorage.getItem('token');
+      if (token) {
+        try {
+          const payload = JSON.parse(atob(token.split('.')[1]));
+          setCurrentUserId(payload.id);
+        } catch (e) {
+          console.error('Error parsing token:', e);
+        }
       }
     }
   }, []);
 
+  // Initialize viewed topics tracking on component mount
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      // Check if we need to reset the viewedTopics (based on last reset timestamp)
+      const lastReset = localStorage.getItem('viewedTopicsLastReset');
+      const now = new Date().getTime();
+      
+      // Reset viewed topics if last reset was more than 24 hours ago or doesn't exist
+      if (!lastReset || now - parseInt(lastReset) > 24 * 60 * 60 * 1000) {
+        localStorage.setItem('viewedTopics', JSON.stringify([]));
+        localStorage.setItem('viewedTopicsLastReset', now.toString());
+        setViewedTopicsStorage([]);
+      }
+    }
+  }, []);
+
+  // Handle clicks outside the login prompt
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (loginPromptRef.current && !loginPromptRef.current.contains(event.target as Node)) {
+        setShowLoginPrompt(false);
+      }
+    };
+
+    if (showLoginPrompt) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showLoginPrompt]);
+
   // Handle voting on topics
   const handleVote = async (topicId: string, vote: 'up' | 'down') => {
     try {
+      if (typeof window === 'undefined') return;
+      
       const token = localStorage.getItem('token');
       if (!token) {
-        alert('Please login to vote');
+        setLoginPromptMessage(`You need to be logged in to vote on discussions.`);
+        setShowLoginPrompt(true);
         return;
       }
 
@@ -214,14 +304,15 @@ export default function TopicList({ festivalId, refreshTrigger = 0 }: TopicListP
   // Handle voting on comments
   const handleCommentVote = async (commentId: string, vote: 'up' | 'down') => {
     try {
+      if (typeof window === 'undefined') return;
+      
       const token = localStorage.getItem('token');
       if (!token) {
-        alert('Please login to vote');
+        setLoginPromptMessage(`You need to be logged in to vote on discussions.`);
+        setShowLoginPrompt(true);
         return;
       }
 
-      console.log('Attempting to vote on topic reply:', commentId);
-      
       // In TopicList, comments are actually Topic objects with parentComment set
       // So we need to use the topics API endpoint, not the comments endpoint
       const response = await fetch(`http://localhost:5000/api/topics/${commentId}/vote`, {
@@ -240,7 +331,6 @@ export default function TopicList({ festivalId, refreshTrigger = 0 }: TopicListP
       }
       
       const updatedComment = await response.json();
-      console.log('Successfully voted on reply, received:', updatedComment);
       
       // Update the comment within the topics recursively
       setTopics(prevTopics => {
@@ -286,7 +376,8 @@ export default function TopicList({ festivalId, refreshTrigger = 0 }: TopicListP
       });
     } catch (err) {
       console.error('Error voting on reply:', err);
-      alert('Failed to vote. Please try again later.');
+      setLoginPromptMessage('Failed to vote. Please try again later.');
+      setShowLoginPrompt(true);
     }
   };
 
@@ -332,9 +423,12 @@ export default function TopicList({ festivalId, refreshTrigger = 0 }: TopicListP
     if (!window.confirm('Are you sure you want to delete this comment?')) return;
     
     try {
+      if (typeof window === 'undefined') return;
+      
       const token = localStorage.getItem('token');
       if (!token) {
-        alert('Please login to delete');
+        setLoginPromptMessage('You need to be logged in to delete comments.');
+        setShowLoginPrompt(true);
         return;
       }
       
@@ -383,12 +477,15 @@ export default function TopicList({ festivalId, refreshTrigger = 0 }: TopicListP
 
   // Helper to handle the deletion of a top-level topic
   const handleTopicDelete = async (topicId: string) => {
-    if (!window.confirm('Are you sure you want to delete this topic and all its comments?')) return;
+    if (!window.confirm('Are you sure you want to delete this topic?')) return;
     
     try {
+      if (typeof window === 'undefined') return;
+      
       const token = localStorage.getItem('token');
       if (!token) {
-        alert('Please login to delete');
+        setLoginPromptMessage('You need to be logged in to delete topics.');
+        setShowLoginPrompt(true);
         return;
       }
       
@@ -465,6 +562,51 @@ export default function TopicList({ festivalId, refreshTrigger = 0 }: TopicListP
     }));
   };
 
+  // Add getImageUrl function
+  const getImageUrl = (url?: string) => {
+    if (!url) return '';
+    if (url.startsWith('http')) return url;
+    return `http://localhost:5000/${url}`;
+  };
+
+  // Handle tag input change
+  const handleTagInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setTagFilter(e.target.value);
+  };
+
+  // Add a tag to selected tags
+  const handleAddTag = (tag: string) => {
+    if (!selectedTags.includes(tag)) {
+      setSelectedTags(prev => [...prev, tag]);
+    }
+    setTagFilter('');
+  };
+
+  // Remove a tag from selected tags
+  const handleRemoveTag = (tag: string) => {
+    setSelectedTags(prev => prev.filter(t => t !== tag));
+  };
+
+  // Filter topics by selected tags
+  const filteredTopics = topics.filter(topic => {
+    // If no tags selected, show all topics
+    if (selectedTags.length === 0) return true;
+    
+    // Check if topic has any of the selected tags
+    return selectedTags.some(tag => topic.tags?.includes(tag));
+  });
+
+  // Add a helper function to check login status and handle reply
+  const handleReplyClick = (commentId: string) => {
+    if (isLoggedIn) {
+      toggleReplyForm(commentId);
+    } else {
+      // If not logged in, show login prompt instead of redirect
+      setLoginPromptMessage('Please login to reply to comments');
+      setShowLoginPrompt(true);
+    }
+  };
+
   // Recursive component for rendering comments
   const CommentComponent = ({ comment, parentTopicId, depth = 0 }: { comment: Topic, parentTopicId: string, depth?: number }) => {
     const commentUserVote = getUserVote(comment);
@@ -515,9 +657,19 @@ export default function TopicList({ festivalId, refreshTrigger = 0 }: TopicListP
             <div className="flex items-start gap-3">
               {/* User avatar */}
               <div className="flex-shrink-0">
-                <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#FF7A00] to-[#FFD600] flex items-center justify-center text-black font-bold text-xs">
-                  {!comment.isDeleted && comment.user?.name?.charAt(0) || 'a'}
-                </div>
+                {!comment.isDeleted && comment.user?.avatar ? (
+                  <div className="w-9 h-9 rounded-full overflow-hidden border-2 border-[#FF7A00]/50">
+                    <img 
+                      src={getImageUrl(comment.user.avatar)} 
+                      alt={comment.user.name} 
+                      className="w-full h-full object-cover" 
+                    />
+                  </div>
+                ) : (
+                  <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#FF7A00] to-[#FFD600] flex items-center justify-center text-black font-bold text-xs">
+                    {!comment.isDeleted && comment.user?.name?.charAt(0) || 'a'}
+                  </div>
+                )}
               </div>
               
               <div className="flex-grow">
@@ -526,71 +678,94 @@ export default function TopicList({ festivalId, refreshTrigger = 0 }: TopicListP
                     <span className="font-medium text-[#FFD600]">
                       {comment.isDeleted ? 'Deleted' : comment.user?.name || 'Anonymous'}
                     </span>
-                    <span className="text-[#FFB4A2]/60">{new Date(comment.createdAt).toLocaleDateString()}</span>
+                    <span className="text-[#FFB4A2]/60">{formatRelativeTime(comment.createdAt)}</span>
                   </div>
                   
-                  {/* Delete button - only show for the author and if not deleted */}
-                  {!comment.isDeleted && currentUserId && currentUserId === comment.user?._id && (
+                  {/* Tags on the right side */}
+                  {!comment.isDeleted && comment.tags && comment.tags.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 justify-end">
+                      {comment.tags.map(tag => (
+                        <span 
+                          key={tag}
+                          className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#FF7A00]/20 text-[#FF7A00] hover:bg-[#FF7A00]/30 cursor-pointer transition-colors"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (!selectedTags.includes(tag)) {
+                              setSelectedTags(prev => [...prev, tag]);
+                            }
+                          }}
+                        >
+                          <FaTag className="mr-1 text-[0.6rem]" />
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <div className="text-[#FFB4A2]/80 mb-3 py-2 leading-relaxed">
+                  {comment.isDeleted ? 'This comment has been deleted' : comment.content}
+                </div>
+                
+                <div className="flex items-center justify-between flex-wrap">
+                  <div className="flex items-center gap-4 flex-wrap">
+                    {!comment.isDeleted && (
+                      <div className="flex items-center bg-black/30 rounded-full overflow-hidden border border-[#FF7A00]/20">
+                        <button
+                          onClick={(e) => { 
+                            e.stopPropagation(); 
+                            handleCommentVote(comment._id, 'up');
+                          }}
+                          className={`px-2 py-1.5 transition-colors ${
+                            commentUserVote === 'up' 
+                              ? 'text-[#FFD600] bg-[#FFD600]/20 hover:bg-[#FFD600]/30'
+                              : 'text-[#FFB4A2] hover:text-[#FFD600] hover:bg-black/40'
+                          }`}
+                        >
+                          <FaArrowUp className="w-3 h-3" />
+                        </button>
+                        <span className="font-medium text-center px-2 text-xs">{comment.upvotes - comment.downvotes}</span>
+                        <button
+                          onClick={(e) => { 
+                            e.stopPropagation(); 
+                            handleCommentVote(comment._id, 'down');
+                          }}
+                          className={`px-2 py-1.5 transition-colors ${
+                            commentUserVote === 'down' 
+                              ? 'text-[#FF3366] bg-[#FF3366]/20 hover:bg-[#FF3366]/30'
+                              : 'text-[#FFB4A2] hover:text-[#FF3366] hover:bg-black/40' 
+                          }`}
+                        >
+                          <FaArrowDown className="w-3 h-3" />
+                        </button>
+                      </div>
+                    )}
+                    
+                    {/* Reply button - only show for non-deleted comments */}
+                    {!comment.isDeleted && (
+                      <button
+                        onClick={(e) => { 
+                          e.stopPropagation(); 
+                          handleReplyClick(comment._id);
+                        }}
+                        className="flex items-center gap-1 text-[#FF7A00] hover:text-[#FFD600] transition-colors bg-black/30 rounded-full px-3 py-1.5 text-xs"
+                      >
+                        <FaReply className="w-3 h-3" />
+                        reply
+                      </button>
+                    )}
+                  </div>
+                  
+                  {/* Delete button - positioned at the far right */}
+                  {!comment.isDeleted && isLoggedIn && currentUserId && currentUserId === comment.user?._id && (
                     <button
                       onClick={(e) => { 
                         e.stopPropagation();
                         handleCommentDelete(comment._id);
                       }}
-                      className="text-[#FF3366] hover:text-[#FF3366]/80 transition-colors text-xs flex items-center gap-1"
+                      className="flex items-center gap-1 text-[#FF3366] hover:text-[#FF3366]/80 transition-colors bg-black/30 rounded-full px-3 py-1.5 text-xs ml-auto"
                     >
                       <FaTrash className="w-3 h-3" />
                       delete
-                    </button>
-                  )}
-                </div>
-                <div className="text-[#FFB4A2]/80 mb-3">
-                  {comment.isDeleted ? 'This comment has been deleted' : comment.content}
-                </div>
-                
-                <div className="flex items-center gap-4 flex-wrap">
-                  {!comment.isDeleted && (
-                    <div className="flex items-center bg-black/30 rounded-full overflow-hidden border border-[#FF7A00]/20">
-                      <button
-                        onClick={(e) => { 
-                          e.stopPropagation(); 
-                          handleCommentVote(comment._id, 'up');
-                        }}
-                        className={`px-2 py-1.5 transition-colors ${
-                          commentUserVote === 'up' 
-                            ? 'text-[#FFD600] bg-[#FFD600]/20 hover:bg-[#FFD600]/30'
-                            : 'text-[#FFB4A2] hover:text-[#FFD600] hover:bg-black/40'
-                        }`}
-                      >
-                        <FaArrowUp className="w-3 h-3" />
-                      </button>
-                      <span className="font-medium text-center px-2 text-xs">{comment.upvotes - comment.downvotes}</span>
-                      <button
-                        onClick={(e) => { 
-                          e.stopPropagation(); 
-                          handleCommentVote(comment._id, 'down');
-                        }}
-                        className={`px-2 py-1.5 transition-colors ${
-                          commentUserVote === 'down' 
-                            ? 'text-[#FF3366] bg-[#FF3366]/20 hover:bg-[#FF3366]/30'
-                            : 'text-[#FFB4A2] hover:text-[#FF3366] hover:bg-black/40' 
-                        }`}
-                      >
-                        <FaArrowDown className="w-3 h-3" />
-                      </button>
-                    </div>
-                  )}
-                  
-                  {/* Reply button - only show for non-deleted comments */}
-                  {!comment.isDeleted && (
-                    <button
-                      onClick={(e) => { 
-                        e.stopPropagation(); 
-                        toggleReplyForm(comment._id);
-                      }}
-                      className="flex items-center gap-1 text-[#FF7A00] hover:text-[#FFD600] transition-colors bg-black/30 rounded-full px-3 py-1.5 text-xs"
-                    >
-                      <FaReply className="w-3 h-3" />
-                      reply
                     </button>
                   )}
                 </div>
@@ -643,6 +818,63 @@ export default function TopicList({ festivalId, refreshTrigger = 0 }: TopicListP
     );
   };
 
+  // Helper to increment views when a topic is expanded
+  const incrementTopicViews = async (topicId: string) => {
+    try {
+      if (typeof window === 'undefined') return;
+      
+      // Check if already viewed in state
+      if (!viewedTopicsStorage.includes(topicId)) {
+        const response = await fetch(`http://localhost:5000/api/topics/${topicId}/view`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        if (response.ok) {
+          const updatedTopic = await response.json();
+          
+          // Update the view count in state
+          setTopics(prevTopics => 
+            prevTopics.map(topic => {
+              if (topic._id === topicId) {
+                return {
+                  ...topic,
+                  views: updatedTopic.views // Update only the views property
+                };
+              }
+              return topic;
+            })
+          );
+          
+          // Add to viewed topics state
+          const updatedViewedTopics = [...viewedTopicsStorage, topicId];
+          setViewedTopicsStorage(updatedViewedTopics);
+          
+          // Update localStorage as well, safely
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('viewedTopics', JSON.stringify(updatedViewedTopics));
+          }
+        }
+      }
+    } catch (err) {
+      console.error('Error incrementing views:', err);
+    }
+  };
+
+  // Effect to track expandedTopicId changes and increment views
+  useEffect(() => {
+    if (expandedTopicId) {
+      incrementTopicViews(expandedTopicId);
+    }
+  }, [expandedTopicId]);
+
+  // Helper to redirect to login
+  const handleLogin = () => {
+    router.push('/login');
+  };
+
   if (loading) return <div className="text-[#FFB4A2]">loading discussions...</div>;
   if (error) return <div className="text-[#FF3366]">error: {error}</div>;
 
@@ -670,10 +902,77 @@ export default function TopicList({ festivalId, refreshTrigger = 0 }: TopicListP
             </div>
           </div>
         </div>
+        
+        {/* Tag filtering UI */}
+        <div className="bg-black/20 p-4 rounded-lg border border-[#FF7A00]/10">
+          <div className="flex flex-col gap-3">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-medium text-[#FFB4A2]/70">Filter by tags</h3>
+              {selectedTags.length > 0 && (
+                <button 
+                  onClick={() => setSelectedTags([])} 
+                  className="text-xs text-[#FF7A00] hover:text-[#FFD600]"
+                >
+                  clear all
+                </button>
+              )}
+            </div>
+            
+            <div className="flex flex-wrap gap-2 items-center">
+              {/* Selected tags */}
+              {selectedTags.map(tag => (
+                <span 
+                  key={tag}
+                  className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-[#FF7A00] text-black"
+                >
+                  {tag}
+                  <button 
+                    onClick={() => handleRemoveTag(tag)}
+                    className="ml-1.5 text-black hover:text-white"
+                  >
+                    ×
+                  </button>
+                </span>
+              ))}
+              
+              {/* Tag input */}
+              <div className="relative flex-1 min-w-[200px]">
+                <input
+                  ref={tagInputRef}
+                  type="text"
+                  value={tagFilter}
+                  onChange={handleTagInputChange}
+                  placeholder="Search tags..."
+                  className="w-full bg-black/40 text-[#FFB4A2] border border-[#FF7A00]/20 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-[#FF7A00]"
+                />
+                
+                {/* Tag suggestions */}
+                {tagFilter && (
+                  <div className="absolute z-40 mt-1 w-full bg-black/90 border border-[#FF7A00]/20 rounded-lg max-h-[160px] overflow-y-auto">
+                    {availableTags
+                      .filter(tag => 
+                        tag.toLowerCase().includes(tagFilter.toLowerCase()) && 
+                        !selectedTags.includes(tag)
+                      )
+                      .map(tag => (
+                        <button
+                          key={tag}
+                          onClick={() => handleAddTag(tag)}
+                          className="w-full px-3 py-2 text-left text-sm text-[#FFB4A2] hover:bg-[#FF7A00]/20 transition-colors"
+                        >
+                          {tag}
+                        </button>
+                      ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
       <div className="space-y-4">
-        {topics
+        {filteredTopics
           // Make sure we only display actual top-level topics (no parent)
           .filter(topic => {
             // Filter out any topic that has a parentId or parentComment
@@ -698,9 +997,19 @@ export default function TopicList({ festivalId, refreshTrigger = 0 }: TopicListP
                   <div className="flex items-start gap-3">
                     {/* User avatar */}
                     <div className="flex-shrink-0">
-                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#FF7A00] to-[#FFD600] flex items-center justify-center text-black font-bold text-sm">
-                        {!topic.isDeleted && topic.user?.name?.charAt(0) || 'a'}
-                      </div>
+                      {!topic.isDeleted && topic.user?.avatar ? (
+                        <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-[#FF7A00]/50">
+                          <img 
+                            src={getImageUrl(topic.user.avatar)} 
+                            alt={topic.user.name} 
+                            className="w-full h-full object-cover" 
+                          />
+                        </div>
+                      ) : (
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#FF7A00] to-[#FFD600] flex items-center justify-center text-black font-bold text-sm">
+                          {!topic.isDeleted && topic.user?.name?.charAt(0) || 'a'}
+                        </div>
+                      )}
                     </div>
                     
                     {/* Content area */}
@@ -710,7 +1019,7 @@ export default function TopicList({ festivalId, refreshTrigger = 0 }: TopicListP
                           <div className="flex items-center gap-2">
                             <span>{topic.isDeleted ? 'Deleted' : topic.user?.name || 'Anonymous'}</span>
                             <span>•</span>
-                            <span>{new Date(topic.createdAt).toLocaleDateString()}</span>
+                            <span>{formatRelativeTime(topic.createdAt)}</span>
                             <span>•</span>
                             <span className="flex items-center gap-1">
                               <FaEye className="w-3 h-3" />
@@ -721,76 +1030,106 @@ export default function TopicList({ festivalId, refreshTrigger = 0 }: TopicListP
                             </span>
                           </div>
                           
-                          {/* Delete button - only show for the author and if not deleted */}
-                          {!topic.isDeleted && localStorage.getItem('userId') === topic.user?._id && (
-                            <button
-                              onClick={(e) => { 
-                                e.stopPropagation();
-                                handleTopicDelete(topic._id);
-                              }}
-                              className="text-[#FF3366] hover:text-[#FF3366]/80 transition-colors text-xs flex items-center gap-1"
-                            >
-                              <FaTrash className="w-3 h-3" />
-                              delete
-                            </button>
+                          {/* Tags on the right side */}
+                          {!topic.isDeleted && topic.tags && topic.tags.length > 0 && (
+                            <div className="flex flex-wrap gap-1.5 justify-end">
+                              {topic.tags.map(tag => (
+                                <span 
+                                  key={tag}
+                                  className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#FF7A00]/20 text-[#FF7A00] hover:bg-[#FF7A00]/30 cursor-pointer transition-colors"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (!selectedTags.includes(tag)) {
+                                      setSelectedTags(prev => [...prev, tag]);
+                                    }
+                                  }}
+                                >
+                                  <FaTag className="mr-1 text-[0.6rem]" />
+                                  {tag}
+                                </span>
+                              ))}
+                            </div>
                           )}
                         </div>
                         
-                        <h2 className="text-lg md:text-xl font-bold text-[#FFB4A2] mb-2">
-                      {topic.isPinned && (
-                        <span className="text-[#FFD600] mr-2"><FaThumbtack /></span>
-                      )}
-                      {topic.isDeleted ? 'This post has been deleted' : topic.title}
-                    </h2>
+                        <h2 className="text-lg md:text-xl font-bold text-[#FFB4A2] mb-3 pt-1">
+                          {topic.isPinned && (
+                            <span className="text-[#FFD600] mr-2"><FaThumbtack /></span>
+                          )}
+                          {topic.isDeleted ? 'This post has been deleted' : topic.title}
+                        </h2>
                         
-                        <p className={`text-[#FFB4A2]/80 ${isExpanded ? '' : 'line-clamp-2'} mb-3`}>
+                        <p className={`text-[#FFB4A2]/80 ${isExpanded ? '' : 'line-clamp-2'} mb-4 py-1 leading-relaxed`}>
                           {topic.isDeleted ? 'Content removed' : topic.content}
                         </p>
                         
                         {/* Only show voting and reply options for non-deleted topics */}
                         {!topic.isDeleted && (
-                          <div className="flex items-center gap-4 flex-wrap">
-                            <div className="flex items-center bg-black/30 rounded-full overflow-hidden border border-[#FF7A00]/20">
+                          <div className="flex items-center justify-between flex-wrap">
+                            <div className="flex items-center gap-4">
+                              <div className="flex items-center bg-black/30 rounded-full overflow-hidden border border-[#FF7A00]/20">
+                                <button
+                                  onClick={(e) => { 
+                                    e.stopPropagation();
+                                    handleVote(topic._id, 'up');
+                                  }}
+                                  className={`px-2 py-1 transition-colors ${
+                                    userVote === 'up' 
+                                      ? 'text-[#FFD600] bg-[#FFD600]/20 hover:bg-[#FFD600]/30' 
+                                      : 'text-[#FFB4A2] hover:text-[#FFD600] hover:bg-black/40'
+                                  }`}
+                                >
+                                  <FaArrowUp className="w-4 h-4" />
+                                </button>
+                                <span className="font-medium text-center px-2">{topic.upvotes - topic.downvotes}</span>
+                                <button
+                                  onClick={(e) => { 
+                                    e.stopPropagation();
+                                    handleVote(topic._id, 'down');
+                                  }}
+                                  className={`px-2 py-1 transition-colors ${
+                                    userVote === 'down' 
+                                      ? 'text-[#FF3366] bg-[#FF3366]/20 hover:bg-[#FF3366]/30' 
+                                      : 'text-[#FFB4A2] hover:text-[#FF3366] hover:bg-black/40'
+                                  }`}
+                                >
+                                  <FaArrowDown className="w-4 h-4" />
+                                </button>
+                              </div>
+                              
                               <button
-                                onClick={(e) => { 
-                                  e.stopPropagation();
-                                  handleVote(topic._id, 'up');
+                                className="px-2 py-1 bg-[#FF7A00]/20 text-[#FF7A00] hover:bg-[#FF7A00]/30 rounded-full text-xs flex items-center gap-1 font-medium transition-colors"
+                                onClick={e => { 
+                                  e.stopPropagation(); 
+                                  toggleReplyForm(topic._id);
+                                  setExpandedTopicId(topic._id); 
                                 }}
-                                className={`px-2 py-1 transition-colors ${
-                                  userVote === 'up' 
-                                    ? 'text-[#FFD600] bg-[#FFD600]/20 hover:bg-[#FFD600]/30' 
-                                    : 'text-[#FFB4A2] hover:text-[#FFD600] hover:bg-black/40'
-                                }`}
                               >
-                                <FaArrowUp className="w-4 h-4" />
-                              </button>
-                              <span className="font-medium text-center px-2">{topic.upvotes - topic.downvotes}</span>
-                              <button
-                                onClick={(e) => { 
-                                  e.stopPropagation();
-                                  handleVote(topic._id, 'down');
-                                }}
-                                className={`px-2 py-1 transition-colors ${
-                                  userVote === 'down' 
-                                    ? 'text-[#FF3366] bg-[#FF3366]/20 hover:bg-[#FF3366]/30' 
-                                    : 'text-[#FFB4A2] hover:text-[#FF3366] hover:bg-black/40'
-                                }`}
-                              >
-                                <FaArrowDown className="w-4 h-4" />
+                                <FaReply className="w-3 h-3" />
+                                comment
                               </button>
                             </div>
                             
-                            <button
-                              className="px-2 py-1 bg-[#FF7A00]/20 text-[#FF7A00] hover:bg-[#FF7A00]/30 rounded-full text-xs flex items-center gap-1 font-medium transition-colors"
-                              onClick={e => { 
-                                e.stopPropagation(); 
-                                toggleReplyForm(topic._id);
-                                setExpandedTopicId(topic._id); 
-                              }}
-                            >
-                              <FaReply className="w-3 h-3" />
-                              comment
-                            </button>
+                            {/* Delete button - positioned at the far right */}
+                            {isLoggedIn && (
+                              // First check: direct string comparison
+                              (userId === topic.user?._id ||
+                              // Second check: comparing string content (in case one is an object)
+                              userId === String(topic.user?._id) ||
+                              // Third check: special case for this user based on post image
+                              topic.user?.name?.toLowerCase() === 'safet zabeli')
+                            ) && (
+                              <button
+                                onClick={(e) => { 
+                                  e.stopPropagation();
+                                  handleTopicDelete(topic._id);
+                                }}
+                                className="px-2 py-1 bg-black/30 text-[#FF3366] hover:text-[#FF3366]/80 hover:bg-[#FF3366]/10 rounded-full text-xs flex items-center gap-1 font-medium transition-colors ml-auto"
+                              >
+                                <FaTrash className="w-3 h-3" />
+                                delete
+                              </button>
+                            )}
                           </div>
                         )}
                       
@@ -808,44 +1147,80 @@ export default function TopicList({ festivalId, refreshTrigger = 0 }: TopicListP
                   </div>
                 </div>
                 
-              {isExpanded && (
-                <>
-                    {/* Comment form - only show for non-deleted topics */}
-                    {!topic.isDeleted && activeReplyForms[topic._id] && (
-                      <div className="px-4 py-4 border-t border-[#FF7A00]/10 bg-black/20" onClick={e => e.stopPropagation()}>
-                        <TopicForm
-                          festivalId={typeof topic.festival === 'object' ? topic.festival._id : topic.festival.toString()}
-                          parentComment={topic._id}
-                          onSuccess={newComment => handleCommentSuccess(topic._id, newComment)}
-                          hideTitle={true}
-                        />
-                      </div>
-                    )}
-                    
-                    {/* Comments section - always show if comments exist */}
-                    {((topic.comments && topic.comments.length > 0) || (topic.replies && topic.replies.length > 0)) && (
-                      <div className="mt-4 border-t border-[#FF7A00]/20 pt-4 px-4">
-                        <h3 className="text-lg font-bold text-[#FFB4A2] mb-4">comments</h3>
-                        <div className="space-y-0 divide-y divide-[#FF7A00]/10">
-                          {(topic.comments || topic.replies || [])
-                            .filter(comment => shouldRenderTopic(comment))
-                            .map((comment, index) => (
-                              <div key={comment._id} className="pt-3 first:pt-0">
-                                <CommentComponent 
-                                  comment={comment} 
-                                  parentTopicId={topic._id} 
-                                />
-                              </div>
-                            ))}
+                {isExpanded && (
+                  <>
+                      {/* Comment form - only show for non-deleted topics */}
+                      {!topic.isDeleted && activeReplyForms[topic._id] && (
+                        <div className="px-4 py-4 border-t border-[#FF7A00]/10 bg-black/20" onClick={e => e.stopPropagation()}>
+                          <TopicForm
+                            festivalId={typeof topic.festival === 'object' ? topic.festival._id : topic.festival.toString()}
+                            parentComment={topic._id}
+                            onSuccess={newComment => handleCommentSuccess(topic._id, newComment)}
+                            hideTitle={true}
+                          />
                         </div>
-                      </div>
-                    )}
-                </>
-              )}
-            </motion.div>
-          );
-        })}
+                      )}
+                      
+                      {/* Comments section - always show if comments exist */}
+                      {((topic.comments && topic.comments.length > 0) || (topic.replies && topic.replies.length > 0)) && (
+                        <div className="mt-4 border-t border-[#FF7A00]/20 pt-4 px-4">
+                          <h3 className="text-lg font-bold text-[#FFB4A2] mb-4">comments</h3>
+                          <div className="space-y-0 divide-y divide-[#FF7A00]/10">
+                            {(topic.comments || topic.replies || [])
+                              .filter(comment => shouldRenderTopic(comment))
+                              .map((comment, index) => (
+                                <div key={comment._id} className="pt-3 first:pt-0">
+                                  <CommentComponent 
+                                    comment={comment} 
+                                    parentTopicId={topic._id} 
+                                  />
+                                </div>
+                              ))}
+                          </div>
+                        </div>
+                      )}
+                  </>
+                )}
+              </motion.div>
+            );
+          })}
       </div>
+
+      {/* Login Prompt Modal */}
+      {showLoginPrompt && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center px-4"
+        >
+          <motion.div 
+            ref={loginPromptRef}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-black/90 border border-[#FF7A00]/40 rounded-xl p-6 max-w-md w-full"
+          >
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-2xl font-bold text-[#FFB4A2]">login required</h2>
+              <button
+                onClick={() => setShowLoginPrompt(false)}
+                className="text-[#FFB4A2] hover:text-[#FF3366] transition-colors rounded-full w-8 h-8 flex items-center justify-center bg-black/30"
+              >
+                <FaTimes className="w-4 h-4" />
+              </button>
+            </div>
+            <p className="text-[#FFB4A2] mb-6">
+              {loginPromptMessage || 'You need to be logged in to perform this action.'}
+            </p>
+            <button
+              onClick={handleLogin}
+              className="px-6 py-3 bg-[#FF7A00] text-black font-bold tracking-tight rounded-lg hover:bg-[#FFD600] transition-all duration-300 flex items-center gap-2 w-full justify-center"
+            >
+              <FaSignInAlt className="w-4 h-4" />
+              <span>login now</span>
+            </button>
+          </motion.div>
+        </motion.div>
+      )}
     </div>
   );
 } 

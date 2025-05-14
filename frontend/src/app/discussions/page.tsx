@@ -5,7 +5,9 @@ import { motion } from 'framer-motion';
 import TopicList from '@/components/TopicList';
 import TopicForm from '@/components/TopicForm';
 import Navbar from '@/components/Navbar';
-import { FaPlus, FaTimes } from 'react-icons/fa';
+import { FaPlus, FaTimes, FaSignInAlt } from 'react-icons/fa';
+import { useAuth } from '@/contexts/AuthContext';
+import { useRouter } from 'next/navigation';
 
 interface Festival {
   _id: string;
@@ -13,11 +15,15 @@ interface Festival {
 }
 
 export default function Discussions() {
+  const { user } = useAuth();
+  const router = useRouter();
   const [selectedFestival, setSelectedFestival] = useState<string | null>(null);
   const [showTopicForm, setShowTopicForm] = useState(false);
+  const [showLoginPrompt, setShowLoginPrompt] = useState(false);
   const [festivals, setFestivals] = useState<Festival[]>([]);
   const [loading, setLoading] = useState(true);
   const formRef = useRef<HTMLDivElement>(null);
+  const loginPromptRef = useRef<HTMLDivElement>(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   useEffect(() => {
@@ -43,23 +49,30 @@ export default function Discussions() {
       if (formRef.current && !formRef.current.contains(event.target as Node)) {
         setShowTopicForm(false);
       }
+      if (loginPromptRef.current && !loginPromptRef.current.contains(event.target as Node)) {
+        setShowLoginPrompt(false);
+      }
     };
 
-    if (showTopicForm) {
+    if (showTopicForm || showLoginPrompt) {
       document.addEventListener('mousedown', handleClickOutside);
     }
     
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [showTopicForm]);
+  }, [showTopicForm, showLoginPrompt]);
 
   const handleFestivalSelect = (festivalId: string) => {
     setSelectedFestival(festivalId === selectedFestival ? null : festivalId);
   };
 
   const handleNewTopic = () => {
-    setShowTopicForm(true);
+    if (user) {
+      setShowTopicForm(true);
+    } else {
+      setShowLoginPrompt(true);
+    }
   };
   
   const handleTopicCreated = () => {
@@ -70,10 +83,14 @@ export default function Discussions() {
     setRefreshTrigger(prev => prev + 1);
   };
 
+  const handleLogin = () => {
+    router.push('/login');
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-black via-black to-[#FF7A00]/20">
+    <div className="bg-gradient-to-br from-black via-black to-[#FF7A00]/20">
+      <div className="fixed inset-0 -z-10 bg-[#FF7A00]/5 backdrop-blur-xl" />
       <Navbar />
-      <div className="fixed inset-0 bg-[#FF7A00]/5 backdrop-blur-3xl pointer-events-none" />
       <main className="relative z-10 max-w-7xl mx-auto px-4 pt-24 pb-20 lowercase">
         {/* Page Header */}
         <div className="mb-8">
@@ -119,6 +136,41 @@ export default function Discussions() {
             ))}
           </div>
         </div>
+
+        {/* Login Prompt */}
+        {showLoginPrompt && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="mb-8"
+          >
+            <div 
+              ref={loginPromptRef}
+              className="bg-black/40 backdrop-blur-sm border border-[#FF7A00]/20 rounded-lg p-6 relative"
+            >
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-2xl font-bold text-[#FFB4A2]">login required</h2>
+                <button
+                  onClick={() => setShowLoginPrompt(false)}
+                  className="text-[#FFB4A2] hover:text-[#FF3366] transition-colors rounded-full w-8 h-8 flex items-center justify-center bg-black/30"
+                >
+                  <FaTimes className="w-4 h-4" />
+                </button>
+              </div>
+              <p className="text-[#FFB4A2] mb-6">
+                you need to be logged in to create a new topic or comment on discussions.
+              </p>
+              <button
+                onClick={handleLogin}
+                className="px-6 py-3 bg-[#FF7A00] text-black font-bold tracking-tight rounded-lg hover:bg-[#FFD600] transition-all duration-300 flex items-center gap-2"
+              >
+                <FaSignInAlt className="w-4 h-4" />
+                <span>login now</span>
+              </button>
+            </div>
+          </motion.div>
+        )}
 
         {/* New Topic Form */}
         {showTopicForm && (

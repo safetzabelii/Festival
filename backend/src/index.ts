@@ -12,12 +12,11 @@ import commentRoutes from './routes/commentRoutes';
 import notificationRoutes from './routes/notificationRoutes';
 import adminRoutes from './routes/adminRoutes';
 import topicRoutes from './routes/topicRoutes';
-import mongoose from 'mongoose';
 import path from 'path';
 
 dotenv.config();
 
-// Connect to MongoDB
+// Connect to MongoDB - using the central connection function
 connectDB();
 
 const app = express();
@@ -67,10 +66,7 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
   res.status(500).json({ message: 'Something went wrong!' });
 });
 
-// Connect to MongoDB
-mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/festival-sphere')
-  .then(() => console.log('Connected to MongoDB'))
-  .catch((err) => console.error('MongoDB connection error:', err));
+// Removed duplicate MongoDB connection here
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);

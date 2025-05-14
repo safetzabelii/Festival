@@ -8,6 +8,7 @@ import LoadingSpinner from '@/components/LoadingSpinner';
 import { motion } from 'framer-motion';
 import { FaSignInAlt, FaTimes } from 'react-icons/fa';
 import { useRouter } from 'next/navigation';
+import api, { getImageUrl } from '@/services/api';
 
 interface Location {
   city: string;
@@ -26,12 +27,6 @@ interface Festival {
   goingTo: number;
 }
 
-const getImageUrl = (url?: string) => {
-  if (!url) return '';
-  if (url.startsWith('http')) return url;
-  return `http://localhost:5000/${url}`;
-};
-
 export default function FestivalsPage() {
   const router = useRouter();
   const [festivals, setFestivals] = useState<Festival[]>([]);
@@ -48,23 +43,11 @@ export default function FestivalsPage() {
   useEffect(() => {
     const fetchFestivals = async () => {
       try {
-        const response = await fetch('http://localhost:5000/api/festivals');
-        if (!response.ok) {
-          throw new Error('Failed to fetch festivals');
-        }
-        const data = await response.json();
-        
-        const processedData = data.map((festival: any) => ({
-          ...festival,
-          location: {
-            city: festival.location?.city || '',
-            country: festival.location?.country || ''
-          }
-        }));
-        
-        setFestivals(processedData);
+        setLoading(true);
+        const response = await api.get('/api/festivals');
+        setFestivals(response.data);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'An error occurred');
+        setError('Failed to load festivals');
       } finally {
         setLoading(false);
       }
@@ -75,22 +58,11 @@ export default function FestivalsPage() {
       if (!token) return;
 
       try {
-        const response = await fetch('http://localhost:5000/api/users/me', {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        });
-
-        if (!response.ok) {
-          throw new Error('Failed to fetch user data');
-        }
-
-        const data = await response.json();
-        const likedFestivals = data.liked.map((item: any) => 
+        const response = await api.get('/api/users/me');
+        const likedFestivals = response.data.liked.map((item: any) => 
           typeof item === 'object' ? item._id : item
         );
-        const goingToFestivals = data.goingTo.map((item: any) => 
+        const goingToFestivals = response.data.goingTo.map((item: any) => 
           typeof item === 'object' ? item._id : item
         );
 
@@ -133,27 +105,8 @@ export default function FestivalsPage() {
         return;
       }
 
-      const response = await fetch(`http://localhost:5000/api/users/me/${type === 'like' ? 'liked' : 'going'}/${festivalId}`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
+      const response = await api.post(`/api/users/me/${type === 'like' ? 'liked' : 'going'}/${festivalId}`);
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        
-        if (response.status === 401) {
-          setLoginPromptMessage('Your session has expired. Please login again.');
-          setShowLoginPrompt(true);
-          return;
-        }
-        throw new Error(errorData.message || 'Failed to perform action');
-      }
-
-      const data = await response.json();
-      
       if (type === 'like') {
         setLikedFestivals(prev => {
           const newSet = new Set(prev);
@@ -164,11 +117,6 @@ export default function FestivalsPage() {
           }
           return newSet;
         });
-        setFestivals(prev => prev.map(festival => 
-          festival._id === festivalId 
-            ? { ...festival, likes: data.festivalLikes }
-            : festival
-        ));
       } else {
         setGoingToFestivals(prev => {
           const newSet = new Set(prev);
@@ -179,14 +127,14 @@ export default function FestivalsPage() {
           }
           return newSet;
         });
-        setFestivals(prev => prev.map(festival => 
-          festival._id === festivalId 
-            ? { ...festival, goingTo: data.festivalGoingTo }
-            : festival
-        ));
       }
     } catch (err) {
-      setError('Action failed. Please try again.');
+      if (err.response && err.response.status === 401) {
+        setLoginPromptMessage('Your session has expired. Please login again.');
+        setShowLoginPrompt(true);
+        return;
+      }
+      setError(`Failed to ${type === 'like' ? 'like' : 'attend'} festival`);
     } finally {
       setIsActionLoading(false);
     }

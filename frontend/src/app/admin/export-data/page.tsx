@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Navbar from '@/components/Navbar';
 import { useAuth } from '@/contexts/AuthContext';
 import LoadingSpinner from '@/components/LoadingSpinner';
+import api from '@/services/api';
 
 export default function ExportDataPage() {
   const router = useRouter();
@@ -45,7 +46,7 @@ export default function ExportDataPage() {
         throw new Error('No authentication token found');
       }
 
-      const response = await fetch(`http://localhost:5000/api/admin/export/${type}`, {
+      const response = await api.get(`/api/admin/export/${type}`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

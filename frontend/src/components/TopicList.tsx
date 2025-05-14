@@ -4,6 +4,7 @@ import TopicForm from './TopicForm';
 import { FaArrowUp, FaArrowDown, FaReply, FaComment, FaEye, FaThumbtack, FaTrash, FaTag, FaTimes, FaPlus, FaSort, FaSignInAlt } from 'react-icons/fa';
 import { formatRelativeTime } from '../utils/dateUtils';
 import { useRouter } from 'next/navigation';
+import api from '@/services/api';
 
 interface TopicListProps {
   festivalId: string | null;
@@ -89,8 +90,8 @@ export default function TopicList({ festivalId, refreshTrigger = 0 }: TopicListP
   const fetchTopics = async () => {
     try {
       const url = festivalId 
-        ? `http://localhost:5000/api/topics/${festivalId}?sort=${sortBy}`
-        : `http://localhost:5000/api/topics?sort=${sortBy}`;
+        ? getImageUrl(imageUrl)
+        : getImageUrl(imageUrl);
       
       const response = await fetch(url);
       if (!response.ok) throw new Error('Failed to fetch topics');
@@ -265,7 +266,7 @@ export default function TopicList({ festivalId, refreshTrigger = 0 }: TopicListP
         return;
       }
 
-      const response = await fetch(`http://localhost:5000/api/topics/${topicId}/vote`, {
+      const response = await api.get(`/api/topics/${topicId}/vote`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -315,7 +316,7 @@ export default function TopicList({ festivalId, refreshTrigger = 0 }: TopicListP
 
       // In TopicList, comments are actually Topic objects with parentComment set
       // So we need to use the topics API endpoint, not the comments endpoint
-      const response = await fetch(`http://localhost:5000/api/topics/${commentId}/vote`, {
+      const response = await api.get(`/api/topics/${commentId}/vote`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -453,7 +454,7 @@ export default function TopicList({ festivalId, refreshTrigger = 0 }: TopicListP
         ((comment.comments && comment.comments.length > 0) || 
          (comment.replies && comment.replies.length > 0));
       
-      const response = await fetch(`http://localhost:5000/api/topics/${commentId}`, {
+      const response = await api.get(`/api/topics/${commentId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -495,7 +496,7 @@ export default function TopicList({ festivalId, refreshTrigger = 0 }: TopicListP
         ((topic.comments && topic.comments.length > 0) || 
          (topic.replies && topic.replies.length > 0));
       
-      const response = await fetch(`http://localhost:5000/api/topics/${topicId}`, {
+      const response = await api.get(`/api/topics/${topicId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -566,7 +567,7 @@ export default function TopicList({ festivalId, refreshTrigger = 0 }: TopicListP
   const getImageUrl = (url?: string) => {
     if (!url) return '';
     if (url.startsWith('http')) return url;
-    return `http://localhost:5000/${url}`;
+    return getImageUrl(imageUrl);
   };
 
   // Handle tag input change
@@ -825,7 +826,7 @@ export default function TopicList({ festivalId, refreshTrigger = 0 }: TopicListP
       
       // Check if already viewed in state
       if (!viewedTopicsStorage.includes(topicId)) {
-        const response = await fetch(`http://localhost:5000/api/topics/${topicId}/view`, {
+        const response = await api.get(`/api/topics/${topicId}/view`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'

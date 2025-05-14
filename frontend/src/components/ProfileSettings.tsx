@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
+import api from '@/services/api';
 
 interface ProfileSettingsProps {
   profile: {
@@ -64,7 +65,7 @@ export default function ProfileSettings({ profile, onUpdate }: ProfileSettingsPr
       }
 
       const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:5000/api/users/me', {
+      const response = await fetch(getImageUrl(imageUrl), {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`

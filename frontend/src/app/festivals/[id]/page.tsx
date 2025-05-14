@@ -7,6 +7,7 @@ import { motion } from 'framer-motion';
 import Discussion from '@/components/Discussion';
 import { FaTimes, FaSignInAlt } from 'react-icons/fa';
 import { createPortal } from 'react-dom';
+import api from '@/services/api';
 
 interface Location {
   city: string;
@@ -76,7 +77,7 @@ export default function FestivalDetailsPage() {
         return;
       }
 
-      const response = await fetch(`http://localhost:5000/api/users/me/${type === 'like' ? 'liked' : 'going'}/${festival._id}`, {
+      const response = await api.get(`/api/users/me/${type === 'like' ? 'liked' : 'going'}/${festival._id}`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -95,7 +96,7 @@ export default function FestivalDetailsPage() {
         throw new Error(errorData.message || 'Failed to perform action');
       }
 
-      const data = await response.json();
+      const data = response.data;
       
       if (type === 'like') {
         setIsLiked(!isLiked);
@@ -139,11 +140,11 @@ export default function FestivalDetailsPage() {
       try {
         if (!params || !params.id) return;
         
-        const response = await fetch(`http://localhost:5000/api/festivals/${params.id}`);
+        const response = await api.get(`/api/festivals/${params.id}`);
         if (!response.ok) {
           throw new Error('Failed to fetch festival');
         }
-        const data = await response.json();
+        const data = response.data;
         setFestival(data);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'An error occurred');
@@ -159,7 +160,7 @@ export default function FestivalDetailsPage() {
       if (!token) return;
 
       try {
-        const response = await fetch('http://localhost:5000/api/users/me', {
+        const response = await fetch(getImageUrl(imageUrl), {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
@@ -170,7 +171,7 @@ export default function FestivalDetailsPage() {
           throw new Error('Failed to fetch user data');
         }
 
-        const data = await response.json();
+        const data = response.data;
         const likedFestivals = data.liked.map((item: any) => 
           typeof item === 'object' ? item._id : item
         );
@@ -277,7 +278,7 @@ export default function FestivalDetailsPage() {
           {festival.imageUrl && (
             <div className="relative h-[400px] w-full">
               <motion.img
-                src={`http://localhost:5000/${festival.imageUrl}`}
+                src={getImageUrl(imageUrl)}
                 alt={festival.name}
                 className="w-full h-full object-cover"
                 initial={{ scale: 1.1 }}

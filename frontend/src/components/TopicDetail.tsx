@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import TopicForm from './TopicForm';
+import api from '@/services/api';
 
 interface Topic {
   _id: string;
@@ -34,9 +35,9 @@ export default function TopicDetail() {
 
   const fetchTopic = async () => {
     try {
-      const response = await fetch(`http://localhost:5000/api/topics/${topicId}`);
+      const response = await api.get(`/api/topics/${topicId}`);
       if (!response.ok) throw new Error('Failed to fetch topic');
-      const data = await response.json();
+      const data = response.data;
       setTopic(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch topic');
@@ -54,7 +55,7 @@ export default function TopicDetail() {
       const token = localStorage.getItem('token');
       if (!token) throw new Error('Please login to vote');
 
-      const response = await fetch(`http://localhost:5000/api/topics/${topicId}/vote`, {
+      const response = await api.get(`/api/topics/${topicId}/vote`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

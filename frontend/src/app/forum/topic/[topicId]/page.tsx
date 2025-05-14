@@ -7,6 +7,7 @@ import TopicForm from '@/components/TopicForm';
 import Navbar from '@/components/Navbar';
 import { formatRelativeTime } from '@/utils/dateUtils';
 import { FaTag } from 'react-icons/fa';
+import api from '@/services/api';
 
 interface User {
   _id: string;
@@ -56,9 +57,9 @@ export default function TopicDetail() {
 
   const fetchTopic = async () => {
     try {
-      const response = await fetch(`http://localhost:5000/api/topics/single/${topicId}`);
+      const response = await api.get(`/api/topics/single/${topicId}`);
       if (!response.ok) throw new Error('Failed to fetch topic');
-      const data = await response.json();
+      const data = response.data;
       
       // Process the topic data to properly organize replies
       if (data.replies && data.replies.length > 0) {
@@ -93,8 +94,8 @@ export default function TopicDetail() {
 
       // If commentId is provided, we're voting on a reply
       const voteUrl = commentId 
-        ? `http://localhost:5000/api/topics/reply/${commentId}/vote` 
-        : `http://localhost:5000/api/topics/${topicId}/vote`;
+        ? getImageUrl(imageUrl) 
+        : getImageUrl(imageUrl);
 
       const response = await fetch(voteUrl, {
         method: 'POST',

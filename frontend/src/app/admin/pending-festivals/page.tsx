@@ -6,7 +6,8 @@ import Navbar from '@/components/Navbar';
 import { useAuth } from '@/contexts/AuthContext';
 import AdminProtectedRoute from '@/components/AdminProtectedRoute';
 
-interface Festival {
+
+import api from '@/services/api';interface Festival {
   _id: string;
   name: string;
   description: string;
@@ -42,7 +43,7 @@ export default function PendingFestivals() {
         return;
       }
 
-      const response = await fetch('http://localhost:5000/api/admin/pending-festivals', {
+      const response = await fetch(getImageUrl(imageUrl), {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -53,7 +54,7 @@ export default function PendingFestivals() {
         throw new Error('Failed to fetch pending festivals');
       }
 
-      const data = await response.json();
+      const data = response.data;
       setPendingFestivals(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An unexpected error occurred');
@@ -92,7 +93,7 @@ export default function PendingFestivals() {
       const token = localStorage.getItem('token');
       if (!token) return;
 
-      const response = await fetch(`http://localhost:5000/api/admin/festivals/${festivalId}/${action}`, {
+      const response = await api.get(`/api/admin/festivals/${festivalId}/${action}`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

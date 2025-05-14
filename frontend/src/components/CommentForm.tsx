@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import api from '@/services/api';
 
 interface Comment {
   _id: string;
@@ -56,7 +57,7 @@ export default function CommentForm({ festivalId, parentComment, onComment, onLo
         tags
       };
 
-      const response = await fetch(`http://localhost:5000/api/comments/${festivalId}`, {
+      const response = await api.get(`/api/comments/${festivalId}`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -66,7 +67,7 @@ export default function CommentForm({ festivalId, parentComment, onComment, onLo
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
+        const errorData = response.data;
         
         // Handle authorization errors with login prompt
         if (response.status === 401 && onLoginRequired) {

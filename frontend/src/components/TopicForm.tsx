@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { FaTag, FaSignInAlt } from 'react-icons/fa';
 import { useRouter } from 'next/navigation';
+import api from '@/services/api';
 
 interface Topic {
   _id: string;
@@ -63,7 +64,7 @@ export default function TopicForm({ festivalId, parentComment, onSuccess, hideTi
         tags
       };
 
-      const response = await fetch(`http://localhost:5000/api/topics/${festivalId}`, {
+      const response = await api.get(`/api/topics/${festivalId}`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -81,7 +82,7 @@ export default function TopicForm({ festivalId, parentComment, onSuccess, hideTi
       }
 
       if (!response.ok) {
-        const errorData = await response.json();
+        const errorData = response.data;
         throw new Error(errorData.message || 'Failed to create topic');
       }
       

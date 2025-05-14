@@ -8,6 +8,7 @@ import Navbar from '@/components/Navbar';
 import { FaPlus, FaTimes, FaSignInAlt } from 'react-icons/fa';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
+import api from '@/services/api';
 
 interface Festival {
   _id: string;
@@ -29,9 +30,9 @@ export default function Discussions() {
   useEffect(() => {
     const fetchFestivals = async () => {
       try {
-        const response = await fetch('http://localhost:5000/api/festivals');
+        const response = await fetch(getImageUrl(imageUrl));
         if (!response.ok) throw new Error('Failed to fetch festivals');
-        const data = await response.json();
+        const data = response.data;
         setFestivals(data);
       } catch (err) {
         console.error('Error fetching festivals:', err);

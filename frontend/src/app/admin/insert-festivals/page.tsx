@@ -5,6 +5,7 @@ import Navbar from '@/components/Navbar';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import type { User } from '@/types/user';
+import api from '@/services/api';
 
 // Add interface for festival data
 interface FestivalData {
@@ -375,7 +376,7 @@ export default function InsertFestivals() {
         }
 
         // Send the festival data to the backend
-        const response = await fetch('http://localhost:5000/api/festivals', {
+        const response = await fetch(getImageUrl(imageUrl), {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${token}`
@@ -384,11 +385,11 @@ export default function InsertFestivals() {
         });
 
         if (!response.ok) {
-          const errorData = await response.json();
+          const errorData = response.data;
           throw new Error(`Failed to insert ${festival.name}: ${errorData.message || response.statusText}`);
         }
 
-        const result = await response.json();
+        const result = response.data;
         setStatus(`Successfully inserted: ${festival.name}`);
       }
 

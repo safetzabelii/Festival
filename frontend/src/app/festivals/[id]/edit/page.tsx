@@ -5,6 +5,7 @@ import { useRouter, useParams } from 'next/navigation';
 import Navbar from '@/components/Navbar';
 import { useAuth } from '@/contexts/AuthContext';
 import LoadingSpinner from '@/components/LoadingSpinner';
+import api from '@/services/api';
 
 interface Festival {
   _id: string;
@@ -67,7 +68,7 @@ export default function EditFestivalPage() {
   useEffect(() => {
     const fetchFestival = async () => {
       try {
-        const response = await fetch(`http://localhost:5000/api/festivals/${params.id}`);
+        const response = await api.get(`/api/festivals/${params.id}`);
         if (!response.ok) {
           throw new Error('Failed to fetch festival');
         }
@@ -215,7 +216,7 @@ export default function EditFestivalPage() {
         formDataToSend.append('image', formData.imageFile);
       }
 
-      const response = await fetch(`http://localhost:5000/api/festivals/${params.id}`, {
+      const response = await api.get(`/api/festivals/${params.id}`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -224,7 +225,7 @@ export default function EditFestivalPage() {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
+        const errorData = response.data;
         throw new Error(errorData.message || 'Failed to update festival');
       }
 

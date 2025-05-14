@@ -9,6 +9,7 @@ import LoadingSpinner from '@/components/LoadingSpinner';
 import { motion } from 'framer-motion';
 import Image from 'next/image';
 import ProfileSettings from '@/components/ProfileSettings';
+import api from '@/services/api';
 
 interface Festival {
   _id: string;
@@ -27,7 +28,7 @@ interface Festival {
 const getImageUrl = (url: string | undefined) => {
   if (!url) return '';
   if (url.startsWith('http')) return url;
-  return `http://localhost:5000/${url}`;
+  return getImageUrl(imageUrl);
 };
 
 interface UserProfile {
@@ -60,7 +61,7 @@ export default function ProfilePage() {
     }
 
     try {
-      const response = await fetch('http://localhost:5000/api/users/me', {
+      const response = await fetch(getImageUrl(imageUrl), {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -71,7 +72,7 @@ export default function ProfilePage() {
         throw new Error('Failed to fetch profile');
       }
 
-      const data = await response.json();
+      const data = response.data;
       setProfile(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');

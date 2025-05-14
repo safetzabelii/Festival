@@ -8,6 +8,7 @@ import Link from 'next/link';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { motion } from 'framer-motion';
 import AdminProtectedRoute from '@/components/AdminProtectedRoute';
+import api from '@/services/api';
 
 interface Festival {
   _id: string;
@@ -53,7 +54,7 @@ export default function AdminDashboard() {
       if (!token) throw new Error('No authentication token found');
 
       // Fetch festivals
-      const festivalsResponse = await fetch('http://localhost:5000/api/festivals', {
+      const festivalsResponse = await fetch(getImageUrl(imageUrl), {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -63,7 +64,7 @@ export default function AdminDashboard() {
       setFestivals(festivalsData);
 
       // Fetch statistics
-      const statsResponse = await fetch('http://localhost:5000/api/admin/stats', {
+      const statsResponse = await fetch(getImageUrl(imageUrl), {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -109,7 +110,7 @@ export default function AdminDashboard() {
     }
 
     try {
-      const response = await fetch(`http://localhost:5000/api/festivals/${festivalId}`, {
+      const response = await api.get(`/api/festivals/${festivalId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`

@@ -7,6 +7,7 @@ import Navbar from '@/components/Navbar';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import Modal from '../../../components/Modal';
 import AdminProtectedRoute from '@/components/AdminProtectedRoute';
+import api from '@/services/api';
 
 interface User {
   _id: string;
@@ -42,18 +43,18 @@ export default function UserManagementPage() {
       const token = localStorage.getItem('token');
       if (!token) throw new Error('No authentication token found');
 
-      const response = await fetch('http://localhost:5000/api/admin/users', {
+      const response = await fetch(getImageUrl(imageUrl), {
         headers: {
           'Authorization': `Bearer ${token}`
         }
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
+        const errorData = response.data;
         throw new Error(errorData.message || 'Failed to fetch users');
       }
 
-      const data = await response.json();
+      const data = response.data;
       setUsers(data);
     } catch (err) {
       console.error('Users fetch error:', err);
@@ -87,7 +88,7 @@ export default function UserManagementPage() {
     if (!userToDelete) return;
     
     try {
-      const response = await fetch(`http://localhost:5000/api/admin/users/${userToDelete._id}`, {
+      const response = await api.get(`/api/admin/users/${userToDelete._id}`, {
         method: 'DELETE',
       });
       
@@ -114,7 +115,7 @@ export default function UserManagementPage() {
       const token = localStorage.getItem('token');
       if (!token) throw new Error('No authentication token found');
 
-      const response = await fetch(`http://localhost:5000/api/admin/users/${userId}/role`, {
+      const response = await api.get(`/api/admin/users/${userId}/role`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -124,7 +125,7 @@ export default function UserManagementPage() {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
+        const errorData = response.data;
         throw new Error(errorData.message || 'Failed to update user role');
       }
 

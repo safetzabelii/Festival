@@ -6,6 +6,7 @@ import { formatRelativeTime } from '../utils/dateUtils';
 import { useRouter } from 'next/navigation';
 import { useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
+import api from '@/services/api';
 
 interface CommentProps {
   comment: {
@@ -89,7 +90,7 @@ export default function Comment({ comment, onVote, onReply, onEdit, onDelete, on
         return;
       }
 
-      const response = await fetch(`http://localhost:5000/api/comments/${comment._id}`, {
+      const response = await api.get(`/api/comments/${comment._id}`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -124,7 +125,7 @@ export default function Comment({ comment, onVote, onReply, onEdit, onDelete, on
 
       const hasReplies = comment.replies && comment.replies.length > 0;
 
-      const response = await fetch(`http://localhost:5000/api/comments/${comment._id}`, {
+      const response = await api.get(`/api/comments/${comment._id}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -142,7 +143,7 @@ export default function Comment({ comment, onVote, onReply, onEdit, onDelete, on
         }
         throw new Error('Failed to delete comment');
       }
-      const data = await response.json();
+      const data = response.data;
 
       // Notify parent component about the deletion, pass the updated comment
       if (data.comment) {
@@ -163,7 +164,7 @@ export default function Comment({ comment, onVote, onReply, onEdit, onDelete, on
         return;
       }
 
-      const response = await fetch(`http://localhost:5000/api/comments/${comment._id}/vote`, {
+      const response = await api.get(`/api/comments/${comment._id}/vote`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

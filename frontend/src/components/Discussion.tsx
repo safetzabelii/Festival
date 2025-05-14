@@ -6,6 +6,7 @@ import CommentForm from './CommentForm';
 import { formatRelativeTime } from '../utils/dateUtils';
 import { FaTag, FaTimes, FaSignInAlt } from 'react-icons/fa';
 import { useRouter } from 'next/navigation';
+import api from '@/services/api';
 
 interface DiscussionProps {
   festivalId: string;
@@ -53,9 +54,9 @@ export default function Discussion({ festivalId }: DiscussionProps) {
 
   const fetchComments = async () => {
     try {
-      const response = await fetch(`http://localhost:5000/api/comments/${festivalId}?sort=${sortBy}`);
+      const response = await api.get(`/api/comments/${festivalId}?sort=${sortBy}`);
       if (!response.ok) throw new Error('Failed to fetch comments');
-      const data = await response.json();
+      const data = response.data;
       setComments(data);
       
       // Extract unique tags from all comments
@@ -186,7 +187,7 @@ export default function Discussion({ festivalId }: DiscussionProps) {
       const token = localStorage.getItem('token');
       if (!token) return;
 
-      await fetch(`http://localhost:5000/api/comments/${commentId}`, {
+      await fetch(getImageUrl(imageUrl), {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,

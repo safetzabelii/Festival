@@ -37,4 +37,5 @@ export const getImageUrl = (url?: string) => {
   return `${API_URL}/${url}`;
 };
 
-export default api; 
+
+import api from '@/services/api';export default api; 

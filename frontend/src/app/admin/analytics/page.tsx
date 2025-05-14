@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Navbar from '@/components/Navbar';
 import { useAuth } from '@/contexts/AuthContext';
 import LoadingSpinner from '@/components/LoadingSpinner';
+import api from '@/services/api';
 
 interface AnalyticsData {
   totalFestivals: number;
@@ -80,7 +81,7 @@ export default function AnalyticsPage() {
           throw new Error('No authentication token found');
         }
 
-        const response = await fetch('http://localhost:5000/api/admin/stats', {
+        const response = await fetch(getImageUrl(imageUrl), {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
@@ -88,7 +89,7 @@ export default function AnalyticsPage() {
         });
 
         if (!response.ok) {
-          const errorData = await response.json();
+          const errorData = response.data;
           if (response.status === 401) {
             // Token expired or invalid
             localStorage.removeItem('token');
@@ -98,7 +99,7 @@ export default function AnalyticsPage() {
           throw new Error(errorData.message || 'Failed to fetch analytics data');
         }
 
-        const data = await response.json();
+        const data = response.data;
         
         // Validate the response data structure
         if (!isValidAnalyticsData(data)) {

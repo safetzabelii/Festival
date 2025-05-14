@@ -7,7 +7,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import AdminProtectedRoute from '@/components/AdminProtectedRoute';
 
-export default function CreateFestivalPage() {
+
+import api from '@/services/api';export default function CreateFestivalPage() {
   const router = useRouter();
   const { user } = useAuth();
   const [formData, setFormData] = useState({
@@ -219,7 +220,7 @@ export default function CreateFestivalPage() {
         formDataToSend.append('image', formData.imageFile);
       }
       
-      const response = await fetch('http://localhost:5000/api/festivals', {
+      const response = await fetch(getImageUrl(imageUrl), {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`

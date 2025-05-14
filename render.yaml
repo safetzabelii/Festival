@@ -4,7 +4,7 @@ services:
     runtime: node
     rootDir: backend
     buildCommand: npm install && npm run build
-    startCommand: npm start
+    startCommand: node render-start.js
     plan: free
     envVars:
       - key: PORT

@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: festivalsphere-backend
+    runtime: node
+    rootDir: backend
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    plan: free
+    envVars:
+      - key: PORT
+        value: 10000
+      - key: NODE_ENV
+        value: production
+      - key: FRONTEND_URL
+        value: https://your-frontend-url.vercel.app  # Update with your actual frontend URL
+      - key: MONGO_URI
+        sync: false  # This will be set manually in Render dashboard
+      - key: JWT_SECRET
+        sync: false  # This will be set manually in Render dashboard 

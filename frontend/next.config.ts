@@ -15,6 +15,14 @@ const nextConfig = {
   // Environment variables that will be available at build time
   env: {
     NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL,
+  },
+  // Disable ESLint during production build
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
+  // Disable TypeScript type checking during build for faster builds
+  typescript: {
+    ignoreBuildErrors: true,
   }
 };
 

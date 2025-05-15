@@ -17,6 +17,33 @@ interface ProfileSettingsProps {
   onUpdate: (updatedProfile: any) => void;
 }
 
+// Helper function to get API URL - use proxy in production, localhost in development
+const getApiUrl = (path: string) => {
+  // In browser environment
+  if (typeof window !== 'undefined') {
+    // Use the proxy in production
+    if (process.env.NODE_ENV === 'production') {
+      return `/api/proxy/${path}`;
+    }
+  }
+  // Fallback to direct URL (for development)
+  return `http://localhost:5000/api/${path}`;
+};
+
+// Helper function to get image URL
+const getImageUrl = (url?: string) => {
+  if (!url) return '';
+  if (url.startsWith('http')) return url;
+  
+  // In production, use the image proxy
+  if (typeof window !== 'undefined' && process.env.NODE_ENV === 'production') {
+    return `/api/image-proxy/${url}`;
+  }
+  
+  // In development, use direct URL
+  return `http://localhost:5000${url}`;
+};
+
 export default function ProfileSettings({ profile, onUpdate }: ProfileSettingsProps) {
   const [name, setName] = useState(profile.name);
   const [socialLinks, setSocialLinks] = useState(profile.socialLinks || {});
@@ -24,12 +51,6 @@ export default function ProfileSettings({ profile, onUpdate }: ProfileSettingsPr
   const [previewUrl, setPreviewUrl] = useState<string | null>(profile.avatar || null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  const getImageUrl = (url: string | undefined) => {
-    if (!url) return '';
-    if (url.startsWith('http')) return url;
-    return `http://localhost:5000${url}`;
-  };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -64,7 +85,7 @@ export default function ProfileSettings({ profile, onUpdate }: ProfileSettingsPr
       }
 
       const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:5000/api/users/me', {
+      const response = await fetch(getApiUrl('users/me'), {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`

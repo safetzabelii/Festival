@@ -8,6 +8,33 @@ import Discussion from '@/components/Discussion';
 import { FaTimes, FaSignInAlt } from 'react-icons/fa';
 import { createPortal } from 'react-dom';
 
+// Helper function to get API URL - use proxy in production, localhost in development
+const getApiUrl = (path: string) => {
+  // In browser environment
+  if (typeof window !== 'undefined') {
+    // Use the proxy in production
+    if (process.env.NODE_ENV === 'production') {
+      return `/api/proxy/${path}`;
+    }
+  }
+  // Fallback to direct URL (for development)
+  return `http://localhost:5000/api/${path}`;
+};
+
+// Helper function to get image URL
+const getImageUrl = (url?: string) => {
+  if (!url) return '';
+  if (url.startsWith('http')) return url;
+  
+  // In production, use the image proxy
+  if (typeof window !== 'undefined' && process.env.NODE_ENV === 'production') {
+    return `/api/image-proxy/${url}`;
+  }
+  
+  // In development, use direct URL
+  return `http://localhost:5000/${url}`;
+};
+
 interface Location {
   city: string;
   country: string;
@@ -76,7 +103,7 @@ export default function FestivalDetailsPage() {
         return;
       }
 
-      const response = await fetch(`http://localhost:5000/api/users/me/${type === 'like' ? 'liked' : 'going'}/${festival._id}`, {
+      const response = await fetch(getApiUrl(`users/me/${type === 'like' ? 'liked' : 'going'}/${festival._id}`), {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -139,7 +166,7 @@ export default function FestivalDetailsPage() {
       try {
         if (!params || !params.id) return;
         
-        const response = await fetch(`http://localhost:5000/api/festivals/${params.id}`);
+        const response = await fetch(getApiUrl(`festivals/${params.id}`));
         if (!response.ok) {
           throw new Error('Failed to fetch festival');
         }
@@ -159,7 +186,7 @@ export default function FestivalDetailsPage() {
       if (!token) return;
 
       try {
-        const response = await fetch('http://localhost:5000/api/users/me', {
+        const response = await fetch(getApiUrl('users/me'), {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
@@ -277,7 +304,7 @@ export default function FestivalDetailsPage() {
           {festival.imageUrl && (
             <div className="relative h-[400px] w-full">
               <motion.img
-                src={`http://localhost:5000/${festival.imageUrl}`}
+                src={getImageUrl(festival.imageUrl)}
                 alt={festival.name}
                 className="w-full h-full object-cover"
                 initial={{ scale: 1.1 }}

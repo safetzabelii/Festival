@@ -9,6 +9,33 @@ import { motion } from 'framer-motion';
 import { FaSignInAlt, FaTimes } from 'react-icons/fa';
 import { useRouter } from 'next/navigation';
 
+// Helper function to get API URL - use proxy in production, localhost in development
+const getApiUrl = (path: string) => {
+  // In browser environment
+  if (typeof window !== 'undefined') {
+    // Use the proxy in production
+    if (process.env.NODE_ENV === 'production') {
+      return `/api/proxy/${path}`;
+    }
+  }
+  // Fallback to direct URL (for development)
+  return `http://localhost:5000/api/${path}`;
+};
+
+// Helper function to get image URL
+const getImageUrl = (url?: string) => {
+  if (!url) return '';
+  if (url.startsWith('http')) return url;
+  
+  // In production, use the image proxy
+  if (typeof window !== 'undefined' && process.env.NODE_ENV === 'production') {
+    return `/api/image-proxy/${url}`;
+  }
+  
+  // In development, use direct URL
+  return `http://localhost:5000/${url}`;
+};
+
 interface Location {
   city: string;
   country: string;
@@ -26,12 +53,6 @@ interface Festival {
   goingTo: number;
 }
 
-const getImageUrl = (url?: string) => {
-  if (!url) return '';
-  if (url.startsWith('http')) return url;
-  return `http://localhost:5000/${url}`;
-};
-
 export default function FestivalsPage() {
   const router = useRouter();
   const [festivals, setFestivals] = useState<Festival[]>([]);
@@ -48,7 +69,7 @@ export default function FestivalsPage() {
   useEffect(() => {
     const fetchFestivals = async () => {
       try {
-        const response = await fetch('http://localhost:5000/api/festivals');
+        const response = await fetch(getApiUrl('festivals'));
         if (!response.ok) {
           throw new Error('Failed to fetch festivals');
         }
@@ -75,7 +96,7 @@ export default function FestivalsPage() {
       if (!token) return;
 
       try {
-        const response = await fetch('http://localhost:5000/api/users/me', {
+        const response = await fetch(getApiUrl('users/me'), {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
@@ -133,7 +154,7 @@ export default function FestivalsPage() {
         return;
       }
 
-      const response = await fetch(`http://localhost:5000/api/users/me/${type === 'like' ? 'liked' : 'going'}/${festivalId}`, {
+      const response = await fetch(getApiUrl(`users/me/${type === 'like' ? 'liked' : 'going'}/${festivalId}`), {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

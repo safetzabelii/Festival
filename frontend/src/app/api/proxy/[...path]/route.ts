@@ -45,17 +45,40 @@ export async function POST(
   console.log(`Proxying POST request to: ${url}`);
   
   try {
-    const body = await request.json();
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(request.headers.get('authorization') 
-            ? { 'Authorization': request.headers.get('authorization') as string } 
-            : {})
-      },
-      body: JSON.stringify(body),
-    });
+    // Check content type to see if it's a form-data request
+    const contentType = request.headers.get('content-type') || '';
+    let response;
+    
+    if (contentType.includes('multipart/form-data')) {
+      // Handle form data
+      console.log('Handling multipart/form-data POST request');
+      
+      // Clone the request to forward it as-is
+      const clonedRequest = request.clone();
+      
+      response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          // Don't manually set content-type for multipart/form-data
+          // to preserve the boundary parameter
+          'Authorization': request.headers.get('authorization') || ''
+        },
+        body: await clonedRequest.arrayBuffer()
+      });
+    } else {
+      // Handle JSON
+      const body = await request.json();
+      response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(request.headers.get('authorization') 
+              ? { 'Authorization': request.headers.get('authorization') as string } 
+              : {})
+        },
+        body: JSON.stringify(body),
+      });
+    }
 
     const data = await response.json();
     return NextResponse.json(data, { status: response.status });
@@ -78,17 +101,40 @@ export async function PUT(
   console.log(`Proxying PUT request to: ${url}`);
   
   try {
-    const body = await request.json();
-    const response = await fetch(url, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(request.headers.get('authorization') 
-            ? { 'Authorization': request.headers.get('authorization') as string } 
-            : {})
-      },
-      body: JSON.stringify(body),
-    });
+    // Check content type to see if it's a form-data request
+    const contentType = request.headers.get('content-type') || '';
+    let response;
+    
+    if (contentType.includes('multipart/form-data')) {
+      // Handle form data
+      console.log('Handling multipart/form-data request');
+      
+      // Clone the request to forward it as-is
+      const clonedRequest = request.clone();
+      
+      response = await fetch(url, {
+        method: 'PUT',
+        headers: {
+          // Don't manually set content-type for multipart/form-data
+          // to preserve the boundary parameter
+          'Authorization': request.headers.get('authorization') || ''
+        },
+        body: await clonedRequest.arrayBuffer()
+      });
+    } else {
+      // Handle JSON
+      const body = await request.json();
+      response = await fetch(url, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(request.headers.get('authorization') 
+              ? { 'Authorization': request.headers.get('authorization') as string } 
+              : {})
+        },
+        body: JSON.stringify(body),
+      });
+    }
 
     const data = await response.json();
     return NextResponse.json(data, { status: response.status });

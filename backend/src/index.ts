@@ -22,9 +22,24 @@ connectDB();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Configure CORS
+// Configure CORS with dynamic origin handling
+const allowedOrigins = [
+  process.env.FRONTEND_URL || 'http://localhost:3000',
+  'https://festival-git-master-safets-projects-ac7dec58.vercel.app',
+  // Add other origins as needed
+];
+
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:3000', // Use env variable for frontend URL
+  origin: function(origin, callback) {
+    // Allow requests with no origin (like mobile apps, curl, etc.)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.indexOf(origin) === -1) {
+      const msg = `The CORS policy for this site does not allow access from the specified origin: ${origin}`;
+      return callback(new Error(msg), false);
+    }
+    return callback(null, true);
+  },
   credentials: true
 }));
 

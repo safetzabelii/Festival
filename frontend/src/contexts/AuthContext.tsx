@@ -4,7 +4,6 @@ import { createContext, useContext, useState, useEffect, ReactNode } from 'react
 import { useRouter, usePathname } from 'next/navigation';
 import type { User } from '@/types/user';
 import LoadingSpinner from '@/components/LoadingSpinner';
-import api from '@/services/api';
 
 interface AuthContextType {
   user: User | null;
@@ -36,15 +35,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      const response = await api.get('/api/users/me');
-      setUser(response.data);
-      if (response.data && response.data._id) {
-        localStorage.setItem('userId', response.data._id);
+      const response = await fetch('http://localhost:5000/api/users/me', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        const userData = await response.json();
+        setUser(userData);
+        if (userData && userData._id) {
+          localStorage.setItem('userId', userData._id);
+        }
+      } else {
+        localStorage.removeItem('token');
+        setUser(null);
       }
     } catch (error) {
       console.error('Error checking user:', error);
       localStorage.removeItem('token');
-      localStorage.removeItem('userId');
       setUser(null);
     } finally {
       setLoading(false);
@@ -61,11 +71,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = async (email: string, password: string) => {
     setLoadingNav(true);
     try {
-      const response = await api.post('/api/auth/login', { email, password });
-      
-      localStorage.setItem('token', response.data.token);
-      if (response.data.user && response.data.user._id) {
-        localStorage.setItem('userId', response.data.user._id);
+      const response = await fetch('http://localhost:5000/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ email, password })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Login failed');
+      }
+
+      const data = await response.json();
+      localStorage.setItem('token', data.token);
+      if (data.user && data.user._id) {
+        localStorage.setItem('userId', data.user._id);
       }
       await checkUser();
       refreshCurrentPage();
@@ -79,11 +101,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const register = async (name: string, email: string, password: string) => {
     setLoadingNav(true);
     try {
-      const response = await api.post('/api/auth/register', { name, email, password });
-      
-      localStorage.setItem('token', response.data.token);
-      if (response.data.user && response.data.user._id) {
-        localStorage.setItem('userId', response.data.user._id);
+      const response = await fetch('http://localhost:5000/api/auth/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ name, email, password })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Registration failed');
+      }
+
+      const data = await response.json();
+      localStorage.setItem('token', data.token);
+      if (data.user && data.user._id) {
+        localStorage.setItem('userId', data.user._id);
       }
       await checkUser();
       refreshCurrentPage();

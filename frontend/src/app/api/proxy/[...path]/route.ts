@@ -130,6 +130,4 @@ export async function DELETE(
       { status: 500 }
     );
   }
-}
-
-// Add other methods like PUT, DELETE if needed 
+} 

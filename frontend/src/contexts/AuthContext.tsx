@@ -15,16 +15,34 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// Helper function to get API URL - use proxy in production, localhost in development
+const getApiUrl = (path: string) => {
+  // In browser environment
+  if (typeof window !== 'undefined') {
+    // Use the proxy in production
+    if (process.env.NODE_ENV === 'production') {
+      return `/api/proxy/${path}`;
+    }
+  }
+  // Fallback to direct URL (for development)
+  return `http://localhost:5000/api/${path}`;
+};
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadingNav, setLoadingNav] = useState(false);
+  const [initialized, setInitialized] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
 
   useEffect(() => {
-    checkUser();
-  }, []);
+    // Only check the user once client side
+    if (typeof window !== 'undefined' && !initialized) {
+      checkUser();
+      setInitialized(true);
+    }
+  }, [initialized]);
 
   const checkUser = async () => {
     try {
@@ -35,7 +53,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      const response = await fetch('http://localhost:5000/api/users/me', {
+      const response = await fetch(getApiUrl('users/me'), {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -49,12 +67,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           localStorage.setItem('userId', userData._id);
         }
       } else {
-        localStorage.removeItem('token');
-        setUser(null);
+        // Only clear token if there's an auth error (401)
+        if (response.status === 401) {
+          localStorage.removeItem('token');
+          setUser(null);
+        }
       }
     } catch (error) {
       console.error('Error checking user:', error);
-      localStorage.removeItem('token');
+      // Don't clear token on network errors
       setUser(null);
     } finally {
       setLoading(false);
@@ -71,7 +92,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = async (email: string, password: string) => {
     setLoadingNav(true);
     try {
-      const response = await fetch('http://localhost:5000/api/auth/login', {
+      const response = await fetch(getApiUrl('auth/login'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -101,7 +122,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const register = async (name: string, email: string, password: string) => {
     setLoadingNav(true);
     try {
-      const response = await fetch('http://localhost:5000/api/auth/register', {
+      const response = await fetch(getApiUrl('auth/register'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'

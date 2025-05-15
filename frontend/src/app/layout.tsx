@@ -4,9 +4,42 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from '@/contexts/AuthContext';
 import Footer from '@/components/Footer';
-import { useEffect } from 'react';
+import { useEffect, useCallback } from 'react';
+import { usePathname } from 'next/navigation';
 
 const inter = Inter({ subsets: ["latin"] });
+
+// Function to fix image URLs in the DOM
+const fixImagesInDOM = () => {
+  if (typeof window === 'undefined') return;
+  
+  console.log('Fixing image URLs in DOM...');
+  
+  // Fix regular img tags
+  const images = document.querySelectorAll('img');
+  images.forEach(img => {
+    const src = img.getAttribute('src');
+    if (src && src.includes('http://localhost:5000/')) {
+      // Handle non-API image paths
+      if (!src.includes('/api/')) {
+        const newSrc = src.replace('http://localhost:5000/', '/api/image-proxy/');
+        console.log(`Fixing image src from ${src} to ${newSrc}`);
+        img.setAttribute('src', newSrc);
+      }
+    }
+  });
+  
+  // Fix background images in inline styles
+  const elementsWithBgStyle = document.querySelectorAll('[style*="background"]');
+  elementsWithBgStyle.forEach(el => {
+    const style = el.getAttribute('style');
+    if (style && style.includes('http://localhost:5000/')) {
+      const newStyle = style.replace(/http:\/\/localhost:5000\//g, '/api/image-proxy/');
+      console.log(`Fixing background style from ${style} to ${newStyle}`);
+      el.setAttribute('style', newStyle);
+    }
+  });
+};
 
 // Function to redirect API calls through our proxy
 const setupApiRedirect = () => {
@@ -39,23 +72,49 @@ const setupApiRedirect = () => {
     // Not an API call or not to localhost, proceed normally
     return originalFetch.call(this, url, options);
   };
+};
+
+// Create a global observer to watch for DOM changes
+const setupMutationObserver = (callback: () => void) => {
+  if (typeof window === 'undefined' || !window.MutationObserver) return;
   
-  // Also fix image URLs in the DOM
-  setTimeout(() => {
-    // Select all images on the page
-    const images = document.querySelectorAll('img');
-    images.forEach(img => {
-      const src = img.getAttribute('src');
-      if (src && src.includes('http://localhost:5000/')) {
-        // Handle non-API image paths
-        if (!src.includes('/api/')) {
-          const newSrc = src.replace('http://localhost:5000/', '/api/image-proxy/');
-          console.log(`Fixing image src from ${src} to ${newSrc}`);
-          img.setAttribute('src', newSrc);
+  // Create a throttled version of the callback
+  let timeout: NodeJS.Timeout | null = null;
+  const throttledCallback = () => {
+    if (timeout) return;
+    timeout = setTimeout(() => {
+      callback();
+      timeout = null;
+    }, 500);
+  };
+  
+  // Create a mutation observer to watch for DOM changes
+  const observer = new MutationObserver((mutations) => {
+    // Check if any images were added
+    for (const mutation of mutations) {
+      if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
+        for (const node of mutation.addedNodes) {
+          if (node instanceof HTMLElement) {
+            // If an img was added or an element that might contain images
+            if (node.tagName === 'IMG' || node.querySelector('img')) {
+              throttledCallback();
+              return;
+            }
+          }
         }
       }
-    });
-  }, 1000); // Wait for images to be loaded
+    }
+  });
+  
+  // Start observing the document body
+  observer.observe(document.body, {
+    childList: true,
+    subtree: true,
+    attributes: true,
+    attributeFilter: ['src', 'style']
+  });
+  
+  return observer;
 };
 
 export default function RootLayout({
@@ -63,10 +122,31 @@ export default function RootLayout({
 }: {
   children: React.ReactNode
 }) {
-  useEffect(() => {
-    // Set up API redirection when component mounts
-    setupApiRedirect();
+  const pathname = usePathname();
+  
+  // Memoize the fix images function to avoid recreating it on each render
+  const fixImages = useCallback(() => {
+    // Wait a bit for the DOM to be updated with images
+    setTimeout(fixImagesInDOM, 500);
   }, []);
+  
+  useEffect(() => {
+    // Setup API redirection when component mounts
+    setupApiRedirect();
+    
+    // Setup mutation observer to fix images when DOM changes
+    const observer = setupMutationObserver(fixImages);
+    
+    return () => {
+      // Clean up observer on unmount
+      if (observer) observer.disconnect();
+    };
+  }, [fixImages]);
+  
+  // Fix images when the route changes
+  useEffect(() => {
+    fixImages();
+  }, [pathname, fixImages]);
   
   return (
     <html lang="en">

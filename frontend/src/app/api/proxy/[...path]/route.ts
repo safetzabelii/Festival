@@ -187,18 +187,29 @@ export async function PUT(
       // Handle form data
       console.log('[Proxy] Handling multipart/form-data PUT request');
       
-      // Clone the request to forward it as-is
-      const clonedRequest = request.clone();
-      
-      response = await fetch(url, {
-        method: 'PUT',
-        headers: {
-          // Don't manually set content-type for multipart/form-data
-          // to preserve the boundary parameter
-          ...(authHeader ? { 'Authorization': authHeader } : {})
-        },
-        body: await clonedRequest.arrayBuffer()
-      });
+      try {
+        // Clone the request to forward it as-is
+        const clonedRequest = request.clone();
+        const buffer = await clonedRequest.arrayBuffer();
+        
+        console.log(`[Proxy] Form data size: ${buffer.byteLength} bytes`);
+        console.log('[Proxy] Forwarding multipart request to backend');
+        
+        response = await fetch(url, {
+          method: 'PUT',
+          headers: {
+            // Don't manually set content-type for multipart/form-data
+            // to preserve the boundary parameter
+            ...(authHeader ? { 'Authorization': authHeader } : {})
+          },
+          body: buffer
+        });
+        
+        console.log(`[Proxy] Backend response received: ${response.status}`);
+      } catch (formError) {
+        console.error('[Proxy] Error processing form data:', formError);
+        throw formError;
+      }
     } else {
       // Handle JSON
       let body;
@@ -268,25 +279,51 @@ export async function DELETE(
   const path = params.path.join('/');
   const url = `${BACKEND_URL}/api/${path}${request.nextUrl.search}`;
   
-  console.log(`Proxying DELETE request to: ${url}`);
+  console.log(`[Proxy] DELETE request to: ${url}`);
   
   try {
+    const authHeader = request.headers.get('authorization');
+    console.log(`[Proxy] Has Auth: ${Boolean(authHeader)}`);
+    
     const response = await fetch(url, {
       method: 'DELETE',
       headers: {
         'Content-Type': 'application/json',
-        ...(request.headers.get('authorization') 
-            ? { 'Authorization': request.headers.get('authorization') as string } 
-            : {})
+        ...(authHeader ? { 'Authorization': authHeader } : {})
       },
     });
 
-    const data = await response.json();
-    return NextResponse.json(data, { status: response.status });
+    console.log(`[Proxy] Response status: ${response.status}`);
+    
+    // Check if response is ok
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`[Proxy] Backend returned error ${response.status}: ${errorText}`);
+      return NextResponse.json(
+        { error: `Backend returned ${response.status}: ${errorText}` },
+        { status: response.status }
+      );
+    }
+    
+    // Try to parse JSON response
+    try {
+      const data = await response.json();
+      return NextResponse.json(data, { status: response.status });
+    } catch (e) {
+      console.error('[Proxy] Error parsing response JSON:', e);
+      // If we can't parse JSON, return the raw text
+      const text = await response.text();
+      return new NextResponse(text, { 
+        status: response.status,
+        headers: {
+          'Content-Type': 'text/plain'
+        }
+      });
+    }
   } catch (error) {
-    console.error('Proxy error:', error);
+    console.error('[Proxy] Critical error:', error);
     return NextResponse.json(
-      { error: 'Failed to connect to backend' },
+      { error: 'Failed to connect to backend', details: error instanceof Error ? error.message : String(error) },
       { status: 500 }
     );
   }

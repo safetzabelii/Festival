@@ -82,31 +82,55 @@ export default function ProfileSettings({ profile, onUpdate }: ProfileSettingsPr
       formData.append('socialLinks', JSON.stringify(socialLinks));
       if (avatar) {
         formData.append('avatar', avatar);
+        console.log(`Uploading file: ${avatar.name}, size: ${Math.round(avatar.size / 1024)}KB, type: ${avatar.type}`);
       }
 
       const token = localStorage.getItem('token');
-      const response = await fetch(getApiUrl('users/me'), {
+      const apiUrl = getApiUrl('users/me');
+      console.log(`Sending PUT request to: ${apiUrl}`);
+      
+      const response = await fetch(apiUrl, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`
+          // Do NOT set Content-Type header when sending FormData
+          // The browser will automatically set it with the correct boundary
         },
         body: formData,
       });
 
+      console.log(`Response status: ${response.status}`);
+      
       if (!response.ok) {
+        // Try to get a more detailed error message from the response
+        let errorDetail = '';
+        try {
+          const errorData = await response.json();
+          errorDetail = errorData.message || errorData.error || '';
+        } catch (e) {
+          // If we can't parse JSON, try to get the text
+          try {
+            errorDetail = await response.text();
+          } catch (e2) {
+            // Ignore error in getting text
+          }
+        }
+        
         if (response.status === 413) {
           setError('Image size must be 5MB or less.');
         } else {
-          setError('Failed to update profile');
+          setError(`Failed to update profile: ${response.status} ${errorDetail ? '- ' + errorDetail : ''}`);
         }
         return;
       }
 
       const updatedProfile = await response.json();
+      console.log('Profile updated successfully');
       onUpdate(updatedProfile);
       setPreviewUrl(updatedProfile.avatar ? getImageUrl(updatedProfile.avatar) : null);
       setAvatar(null);
     } catch (err) {
+      console.error('Error updating profile:', err);
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
       setLoading(false);

@@ -154,26 +154,56 @@ export default function FestivalsPage() {
         return;
       }
 
-      const response = await fetch(getApiUrl(`users/me/${type === 'like' ? 'liked' : 'going'}/${festivalId}`), {
+      // Create the endpoint URL
+      const endpoint = getApiUrl(`users/me/${type === 'like' ? 'liked' : 'going'}/${festivalId}`);
+      console.log(`Sending request to: ${endpoint}`);
+      
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
-        }
+        },
+        // Send empty body for POST request
+        body: JSON.stringify({})
       });
 
+      // Handle various response status codes
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
+        let errorMsg = 'Failed to perform action';
+        
+        try {
+          const errorData = await response.json();
+          errorMsg = errorData.message || errorData.error || errorMsg;
+        } catch (e) {
+          // If we can't parse JSON response, try to get text
+          try {
+            const errorText = await response.text();
+            if (errorText) errorMsg = errorText;
+          } catch (e2) {
+            // Ignore error in getting text
+          }
+        }
         
         if (response.status === 401) {
           setLoginPromptMessage('Your session has expired. Please login again.');
           setShowLoginPrompt(true);
           return;
         }
-        throw new Error(errorData.message || 'Failed to perform action');
+        
+        console.error(`Error ${response.status}: ${errorMsg}`);
+        throw new Error(errorMsg);
       }
 
-      const data = await response.json();
+      // Parse response data
+      let data;
+      try {
+        data = await response.json();
+      } catch (e) {
+        console.error('Error parsing response JSON:', e);
+        // If we can't parse JSON, assume the action was successful but use default values
+        data = { festivalLikes: 0, festivalGoingTo: 0 };
+      }
       
       if (type === 'like') {
         setLikedFestivals(prev => {
@@ -207,7 +237,8 @@ export default function FestivalsPage() {
         ));
       }
     } catch (err) {
-      setError('Action failed. Please try again.');
+      console.error('Action error:', err);
+      setError(err instanceof Error ? err.message : 'Action failed. Please try again.');
     } finally {
       setIsActionLoading(false);
     }

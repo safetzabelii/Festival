@@ -23,10 +23,30 @@ interface Festival {
   imageUrl?: string;
 }
 
+// Helper function to get API URL - use proxy in production, localhost in development
+const getApiUrl = (path: string) => {
+  // In browser environment
+  if (typeof window !== 'undefined') {
+    // Use the proxy in production
+    if (process.env.NODE_ENV === 'production') {
+      return `/api/proxy/${path}`;
+    }
+  }
+  // Fallback to direct URL (for development)
+  return `http://localhost:5000/api/${path}`;
+};
+
 // Add getImageUrl function
 const getImageUrl = (url: string | undefined) => {
   if (!url) return '';
   if (url.startsWith('http')) return url;
+  
+  // In production, use the image proxy
+  if (typeof window !== 'undefined' && process.env.NODE_ENV === 'production') {
+    return `/api/image-proxy/${url}`;
+  }
+  
+  // In development, use direct URL
   return `http://localhost:5000/${url}`;
 };
 
@@ -60,7 +80,7 @@ export default function ProfilePage() {
     }
 
     try {
-      const response = await fetch('http://localhost:5000/api/users/me', {
+      const response = await fetch(getApiUrl('users/me'), {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'

@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
-
-const BACKEND_URL = 'https://festivalsphere-backend.onrender.com';
+import { BACKEND_URL } from '@/config/api';
 
 export async function GET() {
   try {

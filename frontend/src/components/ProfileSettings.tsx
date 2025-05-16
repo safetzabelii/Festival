@@ -80,35 +80,44 @@ export default function ProfileSettings({ profile, onUpdate }: ProfileSettingsPr
       const formData = new FormData();
       formData.append('name', name);
       formData.append('socialLinks', JSON.stringify(socialLinks));
-      if (avatar) {
-        formData.append('avatar', avatar);
-        console.log(`Uploading file: ${avatar.name}, size: ${Math.round(avatar.size / 1024)}KB, type: ${avatar.type}`);
+      
+      const token = localStorage.getItem('token');
+      if (!token) {
+        setError('Authentication token not found. Please log in again.');
+        setLoading(false);
+        return;
       }
 
-      const token = localStorage.getItem('token');
-      const apiUrl = getApiUrl('users/me');
-      console.log(`Sending PUT request to: ${apiUrl}`);
+      let updatedProfile;
       
-      const response = await fetch(apiUrl, {
+      // Step 1: Update profile information first
+      if (avatar) {
+        console.log(`Uploading file: ${avatar.name}, size: ${Math.round(avatar.size / 1024)}KB, type: ${avatar.type}`);
+        // Add the avatar to formData
+        formData.append('avatar', avatar);
+      }
+      
+      // Use the dedicated update-profile endpoint
+      console.log('Sending profile update request');
+      const updateUrl = '/api/update-profile';
+      const response = await fetch(updateUrl, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`
-          // Do NOT set Content-Type header when sending FormData
-          // The browser will automatically set it with the correct boundary
+          // Content-Type is automatically set by the browser when using FormData
         },
-        body: formData,
+        body: formData
       });
-
-      console.log(`Response status: ${response.status}`);
+      
+      console.log(`Update response status: ${response.status}`);
       
       if (!response.ok) {
-        // Try to get a more detailed error message from the response
+        // Try to get error details
         let errorDetail = '';
         try {
           const errorData = await response.json();
-          errorDetail = errorData.message || errorData.error || '';
+          errorDetail = errorData.message || errorData.error || errorData.details || '';
         } catch (e) {
-          // If we can't parse JSON, try to get the text
           try {
             errorDetail = await response.text();
           } catch (e2) {
@@ -124,7 +133,7 @@ export default function ProfileSettings({ profile, onUpdate }: ProfileSettingsPr
         return;
       }
 
-      const updatedProfile = await response.json();
+      updatedProfile = await response.json();
       console.log('Profile updated successfully');
       onUpdate(updatedProfile);
       setPreviewUrl(updatedProfile.avatar ? getImageUrl(updatedProfile.avatar) : null);

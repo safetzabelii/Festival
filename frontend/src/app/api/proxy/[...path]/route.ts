@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-
-// Your Render backend URL - replace with your actual URL
-const BACKEND_URL = 'https://festivalsphere-backend.onrender.com';
+import { BACKEND_URL } from '@/config/api';
 
 export async function GET(
   request: NextRequest,
@@ -193,19 +191,36 @@ export async function PUT(
         const buffer = await clonedRequest.arrayBuffer();
         
         console.log(`[Proxy] Form data size: ${buffer.byteLength} bytes`);
-        console.log('[Proxy] Forwarding multipart request to backend');
+        
+        // Check the headers being sent to the backend
+        const headers: Record<string, string> = {
+          // Don't manually set content-type for multipart/form-data
+          // to preserve the boundary parameter
+          ...(authHeader ? { 'Authorization': authHeader } : {})
+        };
+        
+        // Get the actual Content-Type header from the request to preserve the boundary
+        const requestContentType = request.headers.get('content-type');
+        if (requestContentType) {
+          console.log(`[Proxy] Using original Content-Type: ${requestContentType}`);
+          headers['Content-Type'] = requestContentType;
+        }
+        
+        console.log('[Proxy] Forwarding multipart request to backend with headers:', headers);
         
         response = await fetch(url, {
           method: 'PUT',
-          headers: {
-            // Don't manually set content-type for multipart/form-data
-            // to preserve the boundary parameter
-            ...(authHeader ? { 'Authorization': authHeader } : {})
-          },
+          headers,
           body: buffer
         });
         
         console.log(`[Proxy] Backend response received: ${response.status}`);
+        
+        // If the response indicates an error, try to get more details
+        if (!response.ok) {
+          const errorBody = await response.text();
+          console.error(`[Proxy] Backend error details for PUT multipart request: ${errorBody}`);
+        }
       } catch (formError) {
         console.error('[Proxy] Error processing form data:', formError);
         throw formError;

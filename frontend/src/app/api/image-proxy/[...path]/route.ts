@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-
-// Your Render backend URL - replace with your actual URL
-const BACKEND_URL = 'https://festivalsphere-backend.onrender.com';
+import { BACKEND_URL } from '@/config/api';
 
 export async function GET(
   request: NextRequest,
